@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voymind - Sign Up</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f3f4f6;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            overflow-y: auto;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.12;
+            z-index: 0;
+        }
+
+        .voymind-logo {
+            position: fixed;
+            cursor: pointer;
+            top: 20px;
+            left: 20px;
+            color: #667eea;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            z-index: 1000;
+            transition: transform 0.3s ease, text-shadow 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        }
+
+        .voymind-logo:hover {
+            transform: scale(1.05) rotate(2deg);
+            text-shadow: 0 4px 8px rgba(0,0,0,0.18);
+        }
+
+        .signup-container {
+            background: rgba(239, 68, 68, 0.1);
+            backdrop-filter: blur(12px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 10px 40px rgba(239, 68, 68, 0.2);
+            width: 100%;
+            max-width: 450px;
+            animation: fadeIn 0.4s ease-out;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .signup-header {
+            text-align: center;
+            margin: 2rem 0 2.5rem;
+        }
+
+        .signup-header h1 {
+            color: #dc2626;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .signup-header p {
+            color: #4b5563;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #1f2937;
+            outline: none;
+            transition: all 0.3s ease;
+            font-size: 0.9375rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .form-group input::placeholder {
+            color: #9ca3af;
+        }
+
+        .form-group input:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-group input.error {
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6b7280;
+            background: none;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .password-toggle:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .password-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .password-strength {
+            height: 5px;
+            background: #e5e7eb;
+            margin-top: 8px;
+            border-radius: 2.5px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background: #b91c1c;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .password-strength-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 25%, rgba(255,255,255,0.2) 50%, transparent 75%);
+            animation: shimmer 2s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .password-strength-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .password-strength-text svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .signup-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .signup-btn:hover {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .signup-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .signup-btn:hover::after {
+            left: 100%;
+        }
+
+        .signup-btn:active {
+            transform: translateY(0);
+        }
+
+        .signup-btn:disabled {
+            background: #9ca3af;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 2rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .login-link a {
+            color: #dc2626;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .login-link a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #dc2626;
+            transition: width 0.3s ease;
+        }
+
+        .login-link a:hover::after {
+            width: 100%;
+        }
+
+        .login-link a:hover {
+            color: #ef4444;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.75rem 0;
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .divider::before {
+            margin-right: 0.75rem;
+        }
+
+        .divider::after {
+            margin-left: 0.75rem;
+        }
+
+        .error-message {
+            color: #b91c1c;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, 10px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translate(-50%, -10px);
+            }
+        }
+
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #dc2626;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .toast-notification:hover {
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .toast-notification.error {
+            background-color: #b91c1c;
+        }
+
+        .toast-notification svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Verification Overlay Styles */
+        .verification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(31, 41, 55, 0.95);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .verification-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .verification-container {
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 2.5rem;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 12px 40px rgba(239, 68, 68, 0.2);
+        }
+
+        .verification-overlay.active .verification-container {
+            transform: translateY(0);
+        }
+
+        .verification-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .verification-header h2 {
+            color: #dc2626;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .verification-header p {
+            color: #4b5563;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+        }
+
+        .verification-header p strong {
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .verification-code {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin: 2rem 0;
+        }
+
+        .verification-code input {
+            width: 3.75rem;
+            height: 4.25rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            color: #1f2937;
+            border-radius: 10px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .verification-code input:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .verification-code input.error {
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .verification-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .verification-btn:hover {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .verification-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .verification-btn:hover::after {
+            left: 100%;
+        }
+
+        .verification-btn:disabled {
+            background: #9ca3af;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .verification-resend {
+            margin-top: 1.5rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .verification-resend a {
+            color: #dc2626;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .verification-resend a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #dc2626;
+            transition: width 0.3s ease;
+        }
+
+        .verification-resend a:hover::after {
+            width: 100%;
+        }
+
+        .verification-resend a:hover {
+            color: #ef4444;
+        }
+
+        .verification-error {
+            color: #b91c1c;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .verification-success {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        .verification-success svg {
+            width: 72px;
+            height: 72px;
+            color: #dc2626;
+            margin-bottom: 1.5rem;
+        }
+
+        .verification-success h3 {
+            color: #dc2626;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .verification-success p {
+            color: #4b5563;
+            font-size: 0.9375rem;
+            margin-bottom: 1.5rem;
+            max-width: 320px;
+        }
+
+        .verification-success .btn {
+            padding: 0.875rem 2rem;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .verification-success .btn:hover {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .verification-success .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .verification-success .btn:hover::after {
+            left: 100%;
+        }
+
+        @media (max-width: 480px) {
+            .signup-container, .verification-container {
+                padding: 2rem;
+                border-radius: 16px;
+            }
+
+            body {
+                padding: 0.75rem;
+            }
+
+            .toast-notification {
+                width: calc(100% - 2rem);
+                text-align: center;
+            }
+
+            .verification-code input {
+                width: 3.25rem;
+                height: 3.75rem;
+                font-size: 1.25rem;
+            }
+
+            .voymind-logo {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="voymind-logo" onclick="window.location.href = '/'">Voymind</div>
+    <div class="signup-container">
+        <div class="signup-header">
+            <h1>Create Account</h1>
+            <p>Join Voymind today</p>
+        </div>
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="fullname">Full Name</label>
+                <input type="text" id="fullname" name="fullname" required autocomplete="name" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required autocomplete="email" placeholder="example@example.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" required placeholder="Create a password">
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5C5.63636 5 2 12 2 12C2 12 5.63636 19 12 19C18.3636 19 22 12 22 12C22 12 18.3636 5 12 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="password-strength">
+                    <div class="password-strength-bar"></div>
+                </div>
+                <div class="password-strength-text">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Password strength</span>
+                </div>
+            </div>
+            
+            <button type="submit" class="signup-btn">Sign up</button>
+            
+            <div class="divider">OR</div>
+            
+            <div class="login-link">
+                Already have an account? <a href="#">Log in</a>
+            </div>
+        </form>
+    </div>
+
+    
+    <div class="verification-overlay" id="verificationOverlay">
+        <div class="verification-container">
+            <div class="verification-header">
+                <h2>Verify Your Email</h2>
+                <p>We've sent a 6-digit verification code to <strong id="verificationEmail"></strong></p>
+                <p>Please enter it below to confirm your email address.</p>
+            </div>
+            
+            <form id="verificationForm">
+                <div class="verification-code">
+                    <input type="text" maxlength="1" data-index="0" autocomplete="off">
+                    <input type="text" maxlength="1" data-index="1" autocomplete="off">
+                    <input type="text" maxlength="1" data-index="2" autocomplete="off">
+                    <input type="text" maxlength="1" data-index="3" autocomplete="off">
+                    <input type="text" maxlength="1" data-index="4" autocomplete="off">
+                    <input type="text" maxlength="1" data-index="5" autocomplete="off">
+                </div>
+                
+                <input type="hidden" id="verificationCode" name="code">
+                <input type="hidden" id="verificationEmailInput" name="email">
+                
+                <button type="submit" class="verification-btn" id="verifyBtn">Verify Account</button>
+                
+                <div class="verification-error" id="verificationError">
+                    Invalid verification code. Please try again.
+                </div>
+                
+                <div class="verification-resend" style="cursor: pointer;">
+                    Didn't receive a code? <a id="resendCode">Resend code</a>
+                </div>
+            </form>
+            
+            <div class="verification-success" id="verificationSuccess">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3>Verification Successful!</h3>
+                <p>Your email has been verified. You can now access your account.</p>
+                <a href="/dashboard" class="btn">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.querySelector('.password-toggle');
+            const passwordInput = document.getElementById('password');
+            passwordInput.addEventListener('input', function() {
+                toggleButton.style.display = this.value ? 'none' : 'flex';
+            });
+
+            toggleButton.addEventListener('click', function() {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+
+                const icon = this.querySelector('svg');
+                if (isPassword) {
+                    icon.innerHTML = `
+                        <path d="M17.94 17.94C16.2306 19.243 14.1491 19.9649 12 20C5.63636 20 2 12 2 12C2 12 3.77287 7.714 7.99982 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9.9 4.24C10.5883 4.07888 11.2931 3.99834 12 4C18.3636 4 22 12 22 12C22 12 21.3082 13.3314 20 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14.12 14.12C13.8454 14.4147 13.5141 14.6512 13.1462 14.8151C12.7782 14.9791 12.3809 15.0673 11.9781 15.0744C11.5753 15.0815 11.1752 15.0074 10.8016 14.8565C10.4281 14.7056 10.0887 14.481 9.80385 14.1962C9.51897 13.9113 9.29439 13.5719 9.14351 13.1984C8.99262 12.8248 8.91853 12.4247 8.92563 12.0219C8.93274 11.6191 9.02091 11.2218 9.18488 10.8538C9.34884 10.4859 9.58525 10.1546 9.88 9.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M1 1L23 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    `;
+                } else {
+                    icon.innerHTML = `
+                        <path d="M12 5C5.63636 5 2 12 2 12C2 12 5.63636 19 12 19C18.3636 19 22 12 22 12C22 12 18.3636 5 12 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    `;
+                }
+            });
+
+            const strengthBar = document.querySelector('.password-strength-bar');
+            const strengthText = document.querySelector('.password-strength-text span');
+
+            passwordInput.addEventListener('input', function() {
+                const strength = checkPasswordStrength(this.value);
+                updateStrengthIndicator(strength);
+            });
+
+            function checkPasswordStrength(password) {
+                let strength = 0;
+                if (password.length >= 8) strength++;
+                if (password.length >= 12) strength++;
+                if (password.match(/[A-Z]/)) strength++;
+                if (password.match(/[0-9]/)) strength++;
+                if (password.match(/[^A-Za-z0-9]/)) strength++;
+                return Math.min(strength, 5);
+            }
+
+            function updateStrengthIndicator(strength) {
+                const colors = ['#b91c1c', '#f97316', '#f59e0b', '#22c55e', '#16a34a'];
+                const texts = ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'];
+                const widths = ['20%', '40%', '60%', '80%', '100%'];
+                
+                strengthBar.style.width = widths[strength - 1] || '0%';
+                strengthBar.style.background = colors[strength - 1] || '#b91c1c';
+                strengthText.textContent = strength > 0 ? texts[strength - 1] : 'Very weak';
+            }
+
+            const signupForm = document.getElementById('signupForm');
+            const signupBtn = document.querySelector('.signup-btn');
+            
+            signupForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+                document.querySelectorAll('.form-group input').forEach(input => {
+                    input.classList.remove('error');
+                });
+
+                const formData = new FormData(signupForm);
+                const data = Object.fromEntries(formData.entries());
+
+                let isValid = true;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(data.email)) {
+                    showFieldError('email', 'Please enter a valid email address');
+                    isValid = false;
+                }
+                if (data.password.length < 8) {
+                    showFieldError('password', 'Password must be at least 8 characters');
+                    isValid = false;
+                }
+                
+                if (!isValid) return;
+                signupBtn.disabled = true;
+                signupBtn.textContent = 'Creating account...';
+                
+                try {
+                    const response = await fetch('/signup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        showVerificationOverlay(data.email);
+                    } else {
+                        showToast(result.message || 'Signup failed', 'error');
+                        if (result.errors) {
+                            Object.keys(result.errors).forEach(field => {
+                                showFieldError(field, result.errors[field]);
+                            });
+                        }
+                    }
+                } catch (error) {
+                    showToast('Network error. Please try again.', 'error');
+                    console.error('Signup error:', error);
+                } finally {
+                    signupBtn.disabled = false;
+                    signupBtn.textContent = 'Sign up';
+                }
+            });
+            
+            function showFieldError(fieldName, message) {
+                const input = document.querySelector(`[name="${fieldName}"]`);
+                if (input) {
+                    input.classList.add('error');
+                    
+                    const errorEl = document.createElement('div');
+                    errorEl.className = 'error-message';
+                    errorEl.textContent = message;
+                    input.parentNode.insertBefore(errorEl, input.nextSibling);
+                }
+            }
+            
+            function showToast(message, type = 'info') {
+                const existingToast = document.querySelector('.toast-notification');
+                if (existingToast) existingToast.remove();
+                
+                const toast = document.createElement('div');
+                toast.className = `toast-notification ${type}`;
+                toast.textContent = message;
+                const icon = document.createElement('div');
+                icon.innerHTML = type === 'success' ? 
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>' :
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+                
+                toast.prepend(icon);
+                document.body.appendChild(toast);
+            
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+                toast.addEventListener('click', () => {
+                    toast.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                });
+            }
+
+            const verificationOverlay = document.getElementById('verificationOverlay');
+            const verificationEmail = document.getElementById('verificationEmail');
+            const verificationEmailInput = document.getElementById('verificationEmailInput');
+            const verificationCodeInputs = document.querySelectorAll('.verification-code input');
+            const verificationCodeHidden = document.getElementById('verificationCode');
+            const verificationForm = document.getElementById('verificationForm');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const verificationError = document.getElementById('verificationError');
+            const verificationSuccess = document.getElementById('verificationSuccess');
+            const resendCodeBtn = document.getElementById('resendCode');
+
+            function showVerificationOverlay(email) {
+                verificationEmail.textContent = email;
+                verificationEmailInput.value = email;
+                verificationOverlay.classList.add('active');
+                
+                verificationCodeInputs[0].focus();
+            }
+
+            verificationCodeInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (!/^\d*$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
+                    if (value.length === 1 && index < verificationCodeInputs.length - 1) {
+                        verificationCodeInputs[index + 1].focus();
+                    }
+                    
+                    updateVerificationCode();
+                });
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                        verificationCodeInputs[index - 1].focus();
+                    }
+                });
+            });
+
+            function updateVerificationCode() {
+                let code = '';
+                verificationCodeInputs.forEach(input => {
+                    code += input.value;
+                });
+                verificationCodeHidden.value = code;
+                verifyBtn.disabled = code.length !== 6;
+            }
+
+            verificationForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(verificationForm);
+                const data = Object.fromEntries(formData.entries());
+                
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Verifying...';
+                verificationError.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/verify', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        verificationForm.style.display = 'none';
+                        verificationSuccess.style.display = 'flex';
+                    } else {
+                        verificationError.style.display = 'block';
+                        verificationCodeInputs.forEach(input => {
+                            input.value = '';
+                            input.classList.add('error');
+                        });
+                        verificationCodeInputs[0].focus();
+                    }
+                } catch (error) {
+                    showToast('Network error. Please try again.', 'error');
+                    console.error('Verification error:', error);
+                } finally {
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify Account';
+                }
+            });
+
+            resendCodeBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                const email = verificationEmailInput.value;
+                
+                try {
+                    const response = await fetch('/resend-verification', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        showToast('Verification code resent successfully!', 'success');
+                    } else {
+                        showToast(result.message || 'Failed to resend code', 'error');
+                    }
+                } catch (error) {
+                    showToast('Network error. Please try again.', 'error');
+                    console.error('Resend error:', error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
