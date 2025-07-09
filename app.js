@@ -32,7 +32,40 @@ app.get('/', function(req,res){
 
 async function getChatResponse(prompt) {
   const response = await together.chat.completions.create({
-    messages: [{"role": "user", "content": `My client is planning a vacation. I need you to do all the research and return the final recommendations — no questions, no “would you like to” language. Just give the results directly in this format: Hotels: Confirm if the hotels are good (true/false), include price estimates, and a link for like hotels. Flights: Use Google Flights to find the latest options. Include a step-by-step travel plan (e.g., “Fly from JFK to LAX, then take a taxi to…”). Guides & Places: Recommend places to visit and things to do with brief descriptions. IF GUIDES AND PLACES ISN'T INCLUDED IN THE PROMPT PLEASE DON'T INCLUDE IT OR SAY IT, ALSO FOR FLIGHTS PLEASE ALSO FIND THEM A FLIGHT TICKET OR LOOK ON GOOGLE FLIGHTS AND GIVE THEM A LINK OF A FLIGHT TICKET THEY CAN PURCHASE not just the google flights link NO LOOK ON GOOGLE FLIGHTS and find a flight ticket dont sehnd them this link https://www.google.com/travel/flights as a purchase LINK to the exact flight. ONLY recommend places if he asks here his prompt ${prompt}`}],
+    messages: [{
+      "role": "user",
+      "content": `You are a professional travel planner. Research and provide REAL, BOOKABLE travel recommendations.
+
+IMPORTANT FLIGHT REQUIREMENTS:
+- Find ACTUAL flight tickets that can be purchased immediately
+- Use real airline booking websites like Expedia, Kayak, Skyscanner, or direct airline sites
+- Provide direct booking links to specific flights, not just search pages
+- Include flight numbers, departure/arrival times, and prices
+- Format: "Flight: [Airline] [Flight Number] - [Departure Time] to [Arrival Time] - $[Price] - [Direct Booking Link]"
+
+HOTEL REQUIREMENTS:
+- Provide real hotel booking links from Expedia, Booking.com, Hotels.com, or direct hotel sites
+- Include actual prices and availability for the specified dates
+- Format: "Hotel: [Hotel Name] - $[Price]/night - [Direct Booking Link]"
+
+RESPONSE FORMAT:
+Don't include* *Final Recommendations part! just the information needed!
+Use these exact section headers (no asterisks):
+#### Hotels
+#### Flights
+#### Travel Plan
+#### Places & Activities (only if requested)
+
+For each section, provide:
+- Real prices in USD
+- Direct booking/purchase links
+- Specific details (flight numbers, hotel names, etc.)
+- Step-by-step travel instructions
+
+DO NOT include sections that weren't requested. Only provide what the user specifically asked for.
+
+Here is the travel request: ${prompt}`
+    }],
     model: "deepseek-ai/DeepSeek-V3"
   });
   return response.choices[0].message.content;
