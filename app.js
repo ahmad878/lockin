@@ -37,9 +37,14 @@ async function getChatResponse(prompt) {
       "content": `You are a professional travel planner. Research and provide REAL, BOOKABLE travel recommendations.
 
 IMPORTANT FLIGHT REQUIREMENTS:
-- Find ACTUAL flight tickets that can be purchased immediately
-- Use real airline booking websites like Expedia, Kayak, Skyscanner, or direct airline sites
-- Provide direct booking links to specific flights, not just search pages
+- Use real airline booking websites Only look at flights from  Aviasales (https://www.aviasales.com), or direct airline sites
+- For flight links, provide a direct booking link similar to this format: https://www.aviasales.com/search/NYC0508LAX12081 (where the link includes the deperature and arrivial)
+Dates must be DDMM (day + month), e.g., July 15 = 1507
+
+For round trips, return date comes after destination code with no extra letters, so full pattern is:
+ORIGINDATEDESTINATIONRETURNDATEPASSENGERS
+
+Passengers is just a single number at the end.
 - Include flight numbers, departure/arrival times, and prices
 - Format: "Flight: [Airline] [Flight Number] - [Departure Time] to [Arrival Time] - $[Price] - [Direct Booking Link]"
 
