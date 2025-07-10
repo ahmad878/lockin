@@ -9,6 +9,7 @@ const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 const jwt = require("jsonwebtoken");
 const rateLimit = require('express-rate-limit');
+app.use(express.static(__dirname));
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -40,6 +41,7 @@ IMPORTANT FLIGHT REQUIREMENTS:
 - Use real airline booking websites Only look at flights from  Aviasales (https://www.aviasales.com), or direct airline sites
 - For flight links, provide a direct booking link similar to this format: https://www.aviasales.com/search/NYC0508LAX12081 (where the link includes the deperature and arrivial)
 Dates must be DDMM (day + month), e.g., July 15 = 1507
+IN THE LINK DONT RETURN ANY ROUND TRIPS DONT INCLUDE ANY RETURN JUST ONE WAY SAME WITH RETURN ONE WAY
 
 For round trips, return date comes after destination code with no extra letters, so full pattern is:
 ORIGINDATEDESTINATIONRETURNDATEPASSENGERS

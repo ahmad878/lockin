@@ -4,6 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voymind - Plan Your Dream Trip</title>
+  <link rel="icon" type="image/jpeg" href="/og-image.jpg">
+  <meta name="description" content="Voymind helps you plan your dream trip with AI. Instantly find the best hotels, flights, guides, and activities tailored to your budget and preferences.">
+  <meta name="keywords" content="Voymind, travel planner, AI travel, book flights, book hotels, trip planning, vacation, travel deals, activities, guides">
+  <meta name="author" content="Voymind">
+  <meta property="og:title" content="Voymind - Plan Your Dream Trip">
+  <meta property="og:description" content="AI-powered travel planning. Instantly find the best hotels, flights, guides, and activities for your next adventure.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://voymind.com/">
+  <meta property="og:image" content="https://voymind.com/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Voymind - Plan Your Dream Trip">
+  <meta name="twitter:description" content="AI-powered travel planning. Instantly find the best hotels, flights, guides, and activities for your next adventure.">
+  <meta name="twitter:image" content="https://voymind.com/og-image.jpg">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -37,14 +51,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
   </style>
-  <script data-noptimize="1" data-cfasync="false" data-wpfc-render="false">
-    (function () {
-        var script = document.createElement("script");
-        script.async = 1;
-        script.src = 'https://mntzco.com/NDM1NDA4.js?t=435408';
-        document.head.appendChild(script);
-    })();
-  </script>
 </head>
 <body class="bg-gray-50 font-sans">
   <!-- Header -->
@@ -76,6 +82,7 @@
         <p class="text-xl md:text-2xl mb-8 text-blue-100 leading-relaxed">
           Discover the perfect hotels, flights, guides, and activities tailored to your budget and preferences
         </p>
+
         <div class="flex flex-wrap justify-center gap-4 text-sm">
           <div class="bg-white bg-opacity-20 px-4 py-2 rounded-full">
             <i class="fas fa-hotel mr-2"></i>Best Hotels
@@ -333,74 +340,43 @@
     }
   }
 
-  function formatMarkdown(text) {
-    // Bold
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Links
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 underline hover:text-blue-800">$1</a>');
-    // Numbered lists
-    text = text.replace(/(^|\n)\s*\d+\. (.*?)(?=\n\s*\d+\.|\n\s*- |\n|$)/gs, function(match, p1, p2) {
-      return `${p1}<li class='mb-2'>${p2.trim()}`;
-    });
-    // Dash lists
-    text = text.replace(/(^|\n)\s*- (.*?)(?=\n\s*- |\n\s*\d+\.|\n|$)/gs, function(match, p1, p2) {
-      return `${p1}<li class='mb-2'>${p2.trim()}`;
-    });
-    // Wrap consecutive <li> in <ul>
-    text = text.replace(/((<li[\s\S]*?<\/li>?\s*)+)/g, function(match) {
-      return `<ul class='list-disc pl-6 my-2'>${match}</ul>`;
-    });
-    // Step-by-step sub-lists (numbered)
-    text = text.replace(/Step-by-Step:\s*<ul[^>]*>([\s\S]*?)<\/ul>/g, function(match, steps) {
-      return `<div class='font-semibold mb-1'>Step-by-Step:</div><ol class='list-decimal pl-8 my-2'>${steps.replace(/<li/g, '<li class="mb-1"')}</ol>`;
-    });
-    return text;
-  }
-
-  function parseSections(markdown) {
-    // Split by #### or ### headings
-    const sectionRegex = /(####?\s+.*)/g;
-    const parts = markdown.split(sectionRegex).filter(Boolean);
-    let sections = [];
-    let current = null;
-    for (let part of parts) {
-      if (/^####?\s+/.test(part)) {
-        if (current) sections.push(current);
-        current = { title: part.replace(/^####?\s+/, '').trim(), content: '' };
-      } else if (current) {
-        current.content += part;
-      }
-    }
-    if (current) sections.push(current);
-    return sections;
+  function formatBoldText(text) {
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   }
 
   function showResults(data) {
     const resultsSection = document.getElementById('resultsSection');
     const resultsContent = document.getElementById('resultsContent');
+    
+    // Format the response data
     let html = '';
-
-    // If the response is a string, parse and format it
-    if (typeof data === 'string' || (data && typeof data.response === 'string')) {
-      const responseText = typeof data === 'string' ? data : data.response;
-      // Remove any leading 'Response:'
-      const cleanText = responseText.replace(/^Response:\s*/i, '');
-      const sections = parseSections(cleanText);
-      html = '<div class="space-y-8">';
-      for (const section of sections) {
+    
+    if (typeof data === 'string') {
+      // If it's a string, format it with bold text
+      html = `<div class="prose max-w-none">
+        <div class="text-gray-700 leading-relaxed text-lg">
+          ${formatBoldText(data)}
+        </div>
+      </div>`;
+    } else if (typeof data === 'object') {
+      // If it's an object, create a structured display
+      html = '<div class="space-y-6">';
+      
+      for (const [key, value] of Object.entries(data)) {
+        const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
         html += `
-          <div class="border rounded-xl shadow p-6 bg-gray-50 fade-in">
-            <h4 class="text-2xl font-bold text-blue-700 mb-3">${section.title}</h4>
-            <div class="text-gray-700 leading-relaxed text-lg">${formatMarkdown(section.content)}</div>
+          <div class="border-b border-gray-200 pb-4">
+            <h4 class="text-lg font-semibold text-gray-800 mb-2">${formattedKey}</h4>
+            <div class="text-gray-700">
+              ${typeof value === 'string' ? formatBoldText(value) : JSON.stringify(value, null, 2)}
+            </div>
           </div>
         `;
       }
+      
       html += '</div>';
-    } else if (typeof data === 'object') {
-      // fallback: show as JSON
-      html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
     }
-
+    
     resultsContent.innerHTML = html;
     resultsSection.classList.remove('hidden');
     resultsSection.scrollIntoView({ behavior: 'smooth' });
