@@ -1,4 +1,10 @@
 {
+  "name": "my-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^7.4.4",
