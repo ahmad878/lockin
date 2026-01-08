@@ -67,50 +67,15 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-app.post("/upload-image", upload.single("image"), async (req, res) => {
-  console.log('it reached.')
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: "No file uploaded" });
-    }
-
-    const uploadToCloudinary = () => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "therapy-app-uploads",
-            resource_type: "auto",
-            quality: "auto:good",
-            transformation: [{ width: 1200, height: 1200, crop: "limit" }]
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-
-        stream.end(req.file.buffer);
-      });
-    };
-
-    const result = await uploadToCloudinary();
-
-    res.json({
-      success: true,
-      url: result.secure_url,
-      public_id: result.public_id,
-      message: "File uploaded successfully"
-    });
-
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message || "Upload failed"
-    });
-  }
+app.post("/upload-image", express.json(), async (req, res) => {
+  console.log('POST REQUEST RECEIVED!', req.body);
+  
+  res.json({
+    success: true,
+    message: 'Got your request!',
+    data: req.body
+  });
 });
-
 // ===== Socket.io therapy chat =====
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
