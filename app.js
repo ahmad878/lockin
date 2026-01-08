@@ -20,9 +20,7 @@ cloudinary.config({
 // ===== Multer with memoryStorage =====
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024
-  },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -44,35 +42,41 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-// ===== Middleware =====
+// ===== Middleware (ORDER MATTERS!) =====
+// 1. CORS first
 app.use(cors({
-  origin: '*', // Allow all origins for testing
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  origin: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
   credentials: false
 }));
 
-
-// Handle preflight OPTIONS requests
-app.options('*', cors());
-
+// 2. Body parsing
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// 3. Static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// Rate limiting
+// 4. Rate limiting
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: "Too many requests. Slow down." }
 }));
 
+// ===== Health Check =====
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // ===== Serve dashboard.html at root =====
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-// ===== UPLOAD ROUTE - REMOVED DUPLICATE express.json() =====
-app.post("/upload-image", async (req, res) => {
+// ===== Upload Route =====
+app.post("/upload-image", (req, res) => {
   console.log('POST REQUEST RECEIVED!');
   console.log('Body:', req.body);
   console.log('Headers:', req.headers);
@@ -95,30 +99,17 @@ io.on("connection", (socket) => {
         messages: [
           {
             role: "system",
-            content: `
-You are a calm, kind therapy AI.
-Speak like a human therapist.
-Keep responses VERY short and simple.
-Be warm, empathetic, and supportive.
-Never judge.
-`
+            content: `You are a calm, kind therapy AI. Speak like a human therapist. Keep responses VERY short and simple. Be warm, empathetic, and supportive. Never judge.`
           },
-          {
-            role: "user",
-            content: userMessage
-          }
+          { role: "user", content: userMessage }
         ],
         temperature: 0.7
       });
 
       socket.emit("therapy-response", response.choices[0].message.content);
-
     } catch (err) {
       console.error(err);
-      socket.emit(
-        "therapy-response",
-        "I'm here with you. Something went wrong, but you're not alone."
-      );
+      socket.emit("therapy-response", "I'm here with you. Something went wrong, but you're not alone.");
     }
   });
 
@@ -127,8 +118,10 @@ Never judge.
   });
 });
 
-// ===== Start Server - FIXED SYNTAX ERROR =====
+// ===== Start Server =====
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on PORT: ${PORT}`);
+  console.log(`✅ Binding to: 0.0.0.0:${PORT}`);
 });
