@@ -1,0 +1,16 @@
+{
+  "appId": "com.lockin.app",
+  "appName": "Lock In",
+  "webDir": "public",
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "lockin-production.up.railway.app"
+    ]
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}
