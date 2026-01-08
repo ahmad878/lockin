@@ -62,6 +62,7 @@ app.get("/", (req, res) => {
 // ===== Image/Video Upload Route =====
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
+    console.log('heyy')
     if (!req.file) {
       return res.status(400).json({ success: false, error: "No file uploaded" });
     }
