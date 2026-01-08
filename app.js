@@ -6,11 +6,11 @@ const Together = require("together-ai");
 const path = require("path");
 const cors = require("cors");
 app.use(cors({
-  origin: "*",
+  origin: true, // Accept all origins in development
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
+  allowedHeaders: ["Content-Type"],
+  credentials: false
 }));
-
 
 // ===== Cloudinary & Multer Imports =====
 const cloudinary = require("cloudinary").v2;
