@@ -123,8 +123,9 @@ Never judge.
   });
 });
 
-// ===== Start Server - FIXED SYNTAX ERROR =====
+// ===== Start Server =====
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on PORT: ${PORT}`);
+  console.log(`✅ Binding to: 0.0.0.0:${PORT}`);
 });
