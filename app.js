@@ -4,7 +4,6 @@ const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const Together = require("together-ai");
 const path = require("path");
-const cors = require("cors");
 
 // ===== Cloudinary & Multer Imports =====
 const cloudinary = require("cloudinary").v2;
@@ -17,10 +16,12 @@ cloudinary.config({
   api_secret: 'IBlq5rjUvtdIxBn34N_yjY4dOB0'
 });
 
-// ===== Multer with memoryStorage =====
+// ===== Multer with memoryStorage (no files saved to disk) =====
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit - adjust as needed
+  },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -42,50 +43,57 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-// ===== Middleware (ORDER MATTERS!) =====
-// 1. CORS first
-app.use(cors({
-  origin: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"],
-  credentials: false
-}));
-
-// 2. Body parsing
+// ===== Middleware =====
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 3. Static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// 4. Rate limiting
+// Rate limiting
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: "Too many requests. Slow down." }
 }));
 
-// ===== Health Check =====
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
 // ===== Serve dashboard.html at root =====
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-// ===== Upload Route =====
-app.post("/upload-image", (req, res) => {
-  console.log('POST REQUEST RECEIVED!');
-  console.log('Body:', req.body);
-  console.log('Headers:', req.headers);
-  
-  res.json({
-    success: true,
-    message: 'Got your request!',
-    data: req.body
-  });
+// ===== Image/Video Upload Route =====
+app.post("/upload-image", upload.single("image"), async (req, res) => {
+  try {
+    console.log('heyy')
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "No file uploaded" });
+    }
+
+    // Upload buffer directly to Cloudinary
+    const result = await cloudinary.uploader.upload_stream(
+      {
+        folder: "therapy-app-uploads",
+        resource_type: "auto", // auto-detect image/video/raw
+        quality: "auto:good",
+        transformation: [
+          { width: 1200, height: 1200, crop: "limit" } // optional resize for images
+        ]
+      },
+      (error, result) => {
+        if (error) throw error;
+        return result;
+      }
+    ).end(req.file.buffer);
+
+    res.json({
+      success: true,
+      url: result.secure_url,
+      public_id: result.public_id,
+      message: "File uploaded successfully"
+    });
+
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ success: false, error: err.message || "Upload failed" });
+  }
 });
 
 // ===== Socket.io therapy chat =====
@@ -99,17 +107,30 @@ io.on("connection", (socket) => {
         messages: [
           {
             role: "system",
-            content: `You are a calm, kind therapy AI. Speak like a human therapist. Keep responses VERY short and simple. Be warm, empathetic, and supportive. Never judge.`
+            content: `
+You are a calm, kind therapy AI.
+Speak like a human therapist.
+Keep responses VERY short and simple.
+Be warm, empathetic, and supportive.
+Never judge.
+`
           },
-          { role: "user", content: userMessage }
+          {
+            role: "user",
+            content: userMessage
+          }
         ],
         temperature: 0.7
       });
 
       socket.emit("therapy-response", response.choices[0].message.content);
+
     } catch (err) {
       console.error(err);
-      socket.emit("therapy-response", "I'm here with you. Something went wrong, but you're not alone.");
+      socket.emit(
+        "therapy-response",
+        "I’m here with you. Something went wrong, but you’re not alone."
+      );
     }
   });
 
@@ -119,8 +140,6 @@ io.on("connection", (socket) => {
 });
 
 // ===== Start Server =====
-const PORT = process.env.PORT || 3000;
-
 
 app.listen(3000, '0.0.0.0', () => {
   console.log(`Server running on port 3000`);
