@@ -4,6 +4,13 @@ const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const Together = require("together-ai");
 const path = require("path");
+const cors = require("cors");
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"]
+}));
+
 
 // ===== Cloudinary & Multer Imports =====
 const cloudinary = require("cloudinary").v2;
