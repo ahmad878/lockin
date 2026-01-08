@@ -24,8 +24,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Start server - MUST bind to 0.0.0.0 for Railway
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+
+app.listen(3000, '0.0.0.0', () => {
+  console.log(`Server running on port 3000`);
 });
