@@ -46,11 +46,15 @@ const io = new Server(server, {
 
 // ===== Middleware =====
 app.use(cors({
-  origin: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"],
+  origin: '*', // Allow all origins for testing
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: false
 }));
+
+
+// Handle preflight OPTIONS requests
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -123,9 +127,8 @@ Never judge.
   });
 });
 
-// ===== Start Server =====
+// ===== Start Server - FIXED SYNTAX ERROR =====
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on PORT: ${PORT}`);
-  console.log(`✅ Binding to: 0.0.0.0:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
 });
