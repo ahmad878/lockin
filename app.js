@@ -17,11 +17,11 @@ cloudinary.config({
   api_secret: 'IBlq5rjUvtdIxBn34N_yjY4dOB0'
 });
 
-// ===== Multer with memoryStorage (no files saved to disk) =====
+// ===== Multer with memoryStorage =====
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit - adjust as needed
+    fileSize: 10 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
@@ -43,15 +43,15 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+
+// ===== Middleware =====
 app.use(cors({
-  origin: true, // Accept all origins in development
+  origin: true,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
   credentials: false
 }));
 
-
-// ===== Middleware =====
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -67,8 +67,11 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-app.post("/upload-image", express.json(), async (req, res) => {
-  console.log('POST REQUEST RECEIVED!', req.body);
+// ===== UPLOAD ROUTE - REMOVED DUPLICATE express.json() =====
+app.post("/upload-image", async (req, res) => {
+  console.log('POST REQUEST RECEIVED!');
+  console.log('Body:', req.body);
+  console.log('Headers:', req.headers);
   
   res.json({
     success: true,
@@ -76,6 +79,7 @@ app.post("/upload-image", express.json(), async (req, res) => {
     data: req.body
   });
 });
+
 // ===== Socket.io therapy chat =====
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
@@ -109,7 +113,7 @@ Never judge.
       console.error(err);
       socket.emit(
         "therapy-response",
-        "I’m here with you. Something went wrong, but you’re not alone."
+        "I'm here with you. Something went wrong, but you're not alone."
       );
     }
   });
@@ -119,7 +123,7 @@ Never judge.
   });
 });
 
-// ===== Start Server =====
+// ===== Start Server - FIXED SYNTAX ERROR =====
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
