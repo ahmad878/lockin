@@ -59,29 +59,33 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-// ===== Image/Video Upload Route =====
 app.post("/upload-image", upload.single("image"), async (req, res) => {
+  console.log('it reached.')
   try {
-    console.log('heyy')
     if (!req.file) {
       return res.status(400).json({ success: false, error: "No file uploaded" });
     }
 
-    // Upload buffer directly to Cloudinary
-    const result = await cloudinary.uploader.upload_stream(
-      {
-        folder: "therapy-app-uploads",
-        resource_type: "auto", // auto-detect image/video/raw
-        quality: "auto:good",
-        transformation: [
-          { width: 1200, height: 1200, crop: "limit" } // optional resize for images
-        ]
-      },
-      (error, result) => {
-        if (error) throw error;
-        return result;
-      }
-    ).end(req.file.buffer);
+    const uploadToCloudinary = () => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "therapy-app-uploads",
+            resource_type: "auto",
+            quality: "auto:good",
+            transformation: [{ width: 1200, height: 1200, crop: "limit" }]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+
+        stream.end(req.file.buffer);
+      });
+    };
+
+    const result = await uploadToCloudinary();
 
     res.json({
       success: true,
@@ -92,7 +96,10 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 
   } catch (err) {
     console.error("Upload error:", err);
-    res.status(500).json({ success: false, error: err.message || "Upload failed" });
+    res.status(500).json({
+      success: false,
+      error: err.message || "Upload failed"
+    });
   }
 });
 
