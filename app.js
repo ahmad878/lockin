@@ -5,12 +5,6 @@ const { Server } = require("socket.io");
 const Together = require("together-ai");
 const path = require("path");
 const cors = require("cors");
-app.use(cors({
-  origin: true, // Accept all origins in development
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"],
-  credentials: false
-}));
 
 // ===== Cloudinary & Multer Imports =====
 const cloudinary = require("cloudinary").v2;
@@ -49,6 +43,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+app.use(cors({
+  origin: true, // Accept all origins in development
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+  credentials: false
+}));
+
 
 // ===== Middleware =====
 app.use(express.json());
