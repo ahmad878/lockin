@@ -1,6 +1,5 @@
 const express = require("express");
 const http = require("http");
-const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const Together = require("together-ai");
 const path = require("path");
@@ -47,12 +46,6 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Rate limiting
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests. Slow down." }
-}));
 
 // ===== Serve dashboard.html at root =====
 app.get("/", (req, res) => {
