@@ -52,40 +52,89 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-// ===== Image/Video Upload Route =====
+// ===== Image/Video Upload Route with Proper Debugging =====
 app.post("/upload-image", upload.single("image"), async (req, res) => {
+  console.log('====== UPLOAD REQUEST RECEIVED ======');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('File info:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    encoding: req.file.encoding,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    bufferLength: req.file.buffer ? req.file.buffer.length : 'no buffer'
+  } : 'NO FILE');
+  
   try {
-    console.log('heyy')
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "No file uploaded" });
+      console.log('❌ No file in request');
+      return res.status(400).json({ 
+        success: false, 
+        error: "No file uploaded",
+        debug: {
+          hasFile: false,
+          bodyKeys: Object.keys(req.body),
+          body: req.body
+        }
+      });
     }
 
-    // Upload buffer directly to Cloudinary
-    const result = await cloudinary.uploader.upload_stream(
-      {
-        folder: "therapy-app-uploads",
-        resource_type: "auto", // auto-detect image/video/raw
-        quality: "auto:good",
-        transformation: [
-          { width: 1200, height: 1200, crop: "limit" } // optional resize for images
-        ]
-      },
-      (error, result) => {
-        if (error) throw error;
-        return result;
-      }
-    ).end(req.file.buffer);
+    console.log('✅ File received, uploading to Cloudinary...');
+    
+    // Wrap upload_stream in a Promise
+    const uploadToCloudinary = () => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "therapy-app-uploads",
+            resource_type: "auto",
+            quality: "auto:good",
+            transformation: [
+              { width: 1200, height: 1200, crop: "limit" }
+            ]
+          },
+          (error, result) => {
+            if (error) {
+              console.error('❌ Cloudinary upload error:', error);
+              reject(error);
+            } else {
+              console.log('✅ Cloudinary upload success:', {
+                url: result.secure_url,
+                public_id: result.public_id,
+                format: result.format,
+                bytes: result.bytes
+              });
+              resolve(result);
+            }
+          }
+        );
 
+        // Write the buffer to the stream
+        uploadStream.end(req.file.buffer);
+      });
+    };
+
+    const result = await uploadToCloudinary();
+
+    console.log('✅ Sending success response');
     res.json({
       success: true,
       url: result.secure_url,
       public_id: result.public_id,
+      format: result.format,
+      bytes: result.bytes,
       message: "File uploaded successfully"
     });
 
   } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({ success: false, error: err.message || "Upload failed" });
+    console.error("❌ Upload error:", err);
+    console.error("Error stack:", err.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || "Upload failed",
+      errorDetails: err.toString()
+    });
   }
 });
 
