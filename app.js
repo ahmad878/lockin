@@ -8,10 +8,6 @@ const path = require("path");
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
-// ===== PDF Creation Imports =====
-const { PDFDocument } = require("pdf-lib");
-const sharp = require("sharp");
-
 // ===== Cloudinary Configuration =====
 cloudinary.config({
   cloud_name: 'dxxpkyitl',
@@ -19,18 +15,18 @@ cloudinary.config({
   api_secret: 'IBlq5rjUvtdIxBn34N_yjY4dOB0'
 });
 
-// ===== Multer with memoryStorage =====
+// ===== Multer with memoryStorage (no files saved to disk) =====
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit - adjust as needed
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images allowed.'));
+      cb(new Error('Invalid file type'));
     }
   }
 });
@@ -50,18 +46,24 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+
 // ===== Serve dashboard.html at root =====
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/dashboard.html"));
 });
 
-// ===== Image to PDF Conversion Route =====
-app.post("/convert-to-pdf", upload.single("image"), async (req, res) => {
-  console.log('====== PDF CONVERSION REQUEST RECEIVED ======');
+// ===== Image/Video Upload Route with Proper Debugging =====
+app.post("/upload-image", upload.single("image"), async (req, res) => {
+  console.log('====== UPLOAD REQUEST RECEIVED ======');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
   console.log('File info:', req.file ? {
+    fieldname: req.file.fieldname,
     originalname: req.file.originalname,
+    encoding: req.file.encoding,
     mimetype: req.file.mimetype,
-    size: req.file.size
+    size: req.file.size,
+    bufferLength: req.file.buffer ? req.file.buffer.length : 'no buffer'
   } : 'NO FILE');
   
   try {
@@ -69,73 +71,28 @@ app.post("/convert-to-pdf", upload.single("image"), async (req, res) => {
       console.log('❌ No file in request');
       return res.status(400).json({ 
         success: false, 
-        error: "No image uploaded"
+        error: "No file uploaded",
+        debug: {
+          hasFile: false,
+          bodyKeys: Object.keys(req.body),
+          body: req.body
+        }
       });
     }
 
-    console.log('✅ File received, processing image...');
+    console.log('✅ File received, uploading to Cloudinary...');
     
-    // Step 1: Process image with sharp (optimize and convert to JPEG)
-    const processedImageBuffer = await sharp(req.file.buffer)
-      .jpeg({ quality: 90 })
-      .resize(2480, 3508, { // A4 size at 300 DPI
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .toBuffer();
-
-    console.log('✅ Image processed, creating PDF...');
-
-    // Step 2: Create PDF with pdf-lib
-    const pdfDoc = await PDFDocument.create();
-    
-    // Embed the image in the PDF
-    const image = await pdfDoc.embedJpg(processedImageBuffer);
-    
-    // Get image dimensions
-    const imageDims = image.scale(1);
-    
-    // Create a page with the image dimensions (or standard A4 size)
-    const pageWidth = Math.min(imageDims.width, 595); // A4 width in points
-    const pageHeight = Math.min(imageDims.height, 842); // A4 height in points
-    
-    const page = pdfDoc.addPage([pageWidth, pageHeight]);
-    
-    // Calculate scaling to fit image on page
-    const scale = Math.min(
-      pageWidth / imageDims.width,
-      pageHeight / imageDims.height
-    );
-    
-    const scaledWidth = imageDims.width * scale;
-    const scaledHeight = imageDims.height * scale;
-    
-    // Center the image on the page
-    const x = (pageWidth - scaledWidth) / 2;
-    const y = (pageHeight - scaledHeight) / 2;
-    
-    page.drawImage(image, {
-      x: x,
-      y: y,
-      width: scaledWidth,
-      height: scaledHeight,
-    });
-
-    // Save the PDF as bytes
-    const pdfBytes = await pdfDoc.save();
-    const pdfBuffer = Buffer.from(pdfBytes);
-
-    console.log('✅ PDF created, uploading to Cloudinary...');
-
-    // Step 3: Upload PDF to Cloudinary
+    // Wrap upload_stream in a Promise
     const uploadToCloudinary = () => {
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            folder: "pdf-conversions",
-            resource_type: "raw",
-            format: "pdf",
-            public_id: `converted_${Date.now()}`
+            folder: "therapy-app-uploads",
+            resource_type: "auto",
+            quality: "auto:good",
+            transformation: [
+              { width: 1200, height: 1200, crop: "limit" }
+            ]
           },
           (error, result) => {
             if (error) {
@@ -144,14 +101,17 @@ app.post("/convert-to-pdf", upload.single("image"), async (req, res) => {
             } else {
               console.log('✅ Cloudinary upload success:', {
                 url: result.secure_url,
-                public_id: result.public_id
+                public_id: result.public_id,
+                format: result.format,
+                bytes: result.bytes
               });
               resolve(result);
             }
           }
         );
 
-        uploadStream.end(pdfBuffer);
+        // Write the buffer to the stream
+        uploadStream.end(req.file.buffer);
       });
     };
 
@@ -160,18 +120,19 @@ app.post("/convert-to-pdf", upload.single("image"), async (req, res) => {
     console.log('✅ Sending success response');
     res.json({
       success: true,
-      pdfUrl: result.secure_url,
+      url: result.secure_url,
       public_id: result.public_id,
+      format: result.format,
       bytes: result.bytes,
-      message: "PDF created and uploaded successfully"
+      message: "File uploaded successfully"
     });
 
   } catch (err) {
-    console.error("❌ Conversion error:", err);
+    console.error("❌ Upload error:", err);
     console.error("Error stack:", err.stack);
     res.status(500).json({ 
       success: false, 
-      error: err.message || "Conversion failed",
+      error: err.message || "Upload failed",
       errorDetails: err.toString()
     });
   }
@@ -210,7 +171,7 @@ Never judge.
       console.error(err);
       socket.emit(
         "therapy-response",
-        "I'm here with you. Something went wrong, but you're not alone."
+        "I’m here with you. Something went wrong, but you’re not alone."
       );
     }
   });
@@ -221,6 +182,7 @@ Never judge.
 });
 
 // ===== Start Server =====
+
 app.listen(3000, '0.0.0.0', () => {
   console.log(`Server running on port 3000`);
 });
