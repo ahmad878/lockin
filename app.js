@@ -41,9 +41,27 @@ const todoSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  category: {
+    type: String,
+    trim: true,
+    default: ""
+  },
+  dueDate: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  notificationSent: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -161,7 +179,7 @@ app.get("/", (req, res) => {
   } else {
     res.json({
       success: true,
-      message: "Backend API is running",
+      message: "TaskFlow API is running",
       endpoints: {
         health: "GET /health",
         todos: "GET /todos",
@@ -220,7 +238,7 @@ app.post("/todos", async (req, res) => {
   console.log("Body:", req.body);
 
   try {
-    const { title, description } = req.body;
+    const { title, description, priority, category, dueDate } = req.body;
 
     if (!title) {
       return res.status(400).json({
@@ -239,6 +257,9 @@ app.post("/todos", async (req, res) => {
     const newTodo = new Todo({
       title: title.trim(),
       description: description ? description.trim() : "",
+      priority: priority || 'medium',
+      category: category || "",
+      dueDate: dueDate || null,
       completed: false
     });
 
@@ -268,7 +289,7 @@ app.put("/todos/:id", async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { title, description, completed } = req.body;
+    const { title, description, completed, priority, category, dueDate } = req.body;
 
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
@@ -281,6 +302,9 @@ app.put("/todos/:id", async (req, res) => {
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description.trim();
     if (completed !== undefined) updateData.completed = completed;
+    if (priority !== undefined) updateData.priority = priority;
+    if (category !== undefined) updateData.category = category;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
 
     const updatedTodo = await Todo.findByIdAndUpdate(
       id,
@@ -546,6 +570,35 @@ io.on("connection", (socket) => {
     console.log("❌ Socket disconnected:", socket.id);
   });
 });
+
+// ========================================
+// NOTIFICATION CHECKER (runs every minute)
+// ========================================
+
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+    const dueSoonTodos = await Todo.find({
+      completed: false,
+      dueDate: { $lte: oneHourFromNow, $gte: now },
+      notificationSent: false
+    });
+
+    dueSoonTodos.forEach(async (todo) => {
+      console.log(`📢 Notification: "${todo.title}" is due soon!`);
+      
+      // Mark as notified
+      await Todo.findByIdAndUpdate(todo._id, { notificationSent: true });
+      
+      // You can add email/SMS notification logic here
+      // For now, just log it
+    });
+  } catch (err) {
+    console.error("❌ Notification checker error:", err);
+  }
+}, 60000); // Check every minute
 
 // ===== 404 Handler =====
 app.use((req, res) => {
