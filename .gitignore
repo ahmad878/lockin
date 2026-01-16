@@ -1,27 +1,8 @@
-# Environment variables
-.env
-.env.local
-.env.*.local
+# Ignore everything
+*
 
-# Dependencies
-node_modules/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
-dist/
-build/
-android/build/
-
+# But don’t ignore these essential files
+!app.js
+!package.json
+!package-lock.json
+!capacitor.config.json
