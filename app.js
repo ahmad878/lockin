@@ -553,6 +553,105 @@ app.get('/login', function(req, res) {
   res.sendFile(loginPath);
 });
 
+// Send message notification by email
+app.post('/send-message-notification', async function(req, res) {
+  try {
+    const { toEmail, fromUserId, fromName } = req.body;
+    console.log('Send message notification request:', { toEmail, fromUserId, fromName });
+
+    if (!toEmail || !fromUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and fromUserId are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let correctedEmail = toEmail.trim().toLowerCase();
+    
+    // Auto-correct email if invalid
+    if (!emailRegex.test(correctedEmail)) {
+      // Remove spaces
+      correctedEmail = correctedEmail.replace(/\s+/g, '');
+      
+      // If no @ symbol, add one before the last dot or at the end
+      if (!correctedEmail.includes('@')) {
+        const lastDot = correctedEmail.lastIndexOf('.');
+        if (lastDot > 0) {
+          correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
+        } else {
+          correctedEmail = correctedEmail + '@email.com';
+        }
+      }
+      
+      // If @ exists but no domain after it, add default domain
+      if (correctedEmail.includes('@')) {
+        const atIndex = correctedEmail.indexOf('@');
+        const afterAt = correctedEmail.substring(atIndex + 1);
+        if (!afterAt || !afterAt.includes('.')) {
+          correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
+        }
+      }
+      
+      // Validate again after correction
+      if (!emailRegex.test(correctedEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+    }
+
+    // Find user by email in database
+    const targetUser = await User.findOne({ email: correctedEmail });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User with this email does not exist'
+      });
+    }
+
+    const targetUserId = targetUser._id.toString();
+
+    // Check if user is online (has socket connection)
+    const recipientSocketId = userSocketMap.get(targetUserId);
+
+    if (recipientSocketId) {
+      // Send notification via socket
+      io.to(recipientSocketId).emit('message-notification', {
+        id: Date.now(),
+        fromUserId: fromUserId,
+        fromName: fromName || 'Someone',
+        message: 'You received a message',
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`✅ Message notification sent to ${targetUserId} (${correctedEmail})`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Notification sent successfully',
+        recipientEmail: correctedEmail
+      });
+    } else {
+      // User is not online
+      return res.status(404).json({
+        success: false,
+        message: 'User is not currently online'
+      });
+    }
+
+  } catch (error) {
+    console.error('Send message notification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while sending notification'
+    });
+  }
+});
+
 app.post("/save-profile", async (req, res) => {
   console.log("====== SAVE PROFILE REQUEST ======");
   console.log("Body:", req.body);
@@ -702,22 +801,100 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 });
 
 // ========================================
-// SOCKET.IO THERAPY CHAT
+// SOCKET.IO CALL SIGNALING (WhatsApp Style)
 // ========================================
+
+// Map to store userId -> socketId for call routing
+const userSocketMap = new Map();
 
 io.on("connection", (socket) => {
   console.log("✅ Socket connected:", socket.id);
 
-  // ===== Call Handler =====
-  socket.on("call", (callData) => {
-    console.log("📞 Call received:", {
-      from: socket.id,
-      to: callData.to,
-      timestamp: callData.timestamp,
-      fullData: callData
-    });
+  // ===== User Registration =====
+  socket.on("register-user", (userId) => {
+    userSocketMap.set(userId, socket.id);
+    console.log(`📱 User ${userId} registered with socket ${socket.id}`);
+    console.log("📊 Active users:", Array.from(userSocketMap.keys()));
   });
 
+  // ===== Incoming Call Handler =====
+  socket.on("call-user", (callData) => {
+    const { fromUserId, toUserId, callerName } = callData;
+    const recipientSocketId = userSocketMap.get(toUserId);
+
+    console.log(`📞 Call initiated: ${fromUserId} -> ${toUserId}`);
+    console.log(`🔍 Recipient socket: ${recipientSocketId}`);
+
+    if (recipientSocketId) {
+      // Send incoming call ONLY to the recipient
+      io.to(recipientSocketId).emit("incoming-call", {
+        fromUserId: fromUserId,
+        callerName: callerName,
+        callId: `${fromUserId}-${Date.now()}`,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`✅ Incoming call notification sent to ${toUserId}`);
+    } else {
+      // User not online
+      socket.emit("call-failed", {
+        message: `User ${toUserId} is not online`,
+        code: "USER_OFFLINE"
+      });
+      console.log(`❌ User ${toUserId} is offline`);
+    }
+  });
+
+  // ===== Accept Call Handler =====
+  socket.on("accept-call", (callData) => {
+    const { fromUserId, acceptedByUserId } = callData;
+    const callerSocketId = userSocketMap.get(fromUserId);
+
+    console.log(`✅ Call accepted: ${acceptedByUserId} accepted call from ${fromUserId}`);
+
+    if (callerSocketId) {
+      // Notify caller that call was accepted
+      io.to(callerSocketId).emit("call-accepted", {
+        acceptedBy: acceptedByUserId,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`📢 Call accepted notification sent to ${fromUserId}`);
+    }
+  });
+
+  // ===== Reject Call Handler =====
+  socket.on("reject-call", (callData) => {
+    const { fromUserId, rejectedByUserId } = callData;
+    const callerSocketId = userSocketMap.get(fromUserId);
+
+    console.log(`❌ Call rejected: ${rejectedByUserId} rejected call from ${fromUserId}`);
+
+    if (callerSocketId) {
+      // Notify caller that call was rejected
+      io.to(callerSocketId).emit("call-rejected", {
+        rejectedBy: rejectedByUserId,
+        reason: callData.reason || "User declined",
+        timestamp: new Date().toISOString()
+      });
+      console.log(`📢 Call rejection notification sent to ${fromUserId}`);
+    }
+  });
+
+  // ===== End Call Handler =====
+  socket.on("end-call", (callData) => {
+    const { fromUserId, toUserId } = callData;
+    const recipientSocketId = userSocketMap.get(toUserId);
+
+    console.log(`🔴 Call ended: ${fromUserId} -> ${toUserId}`);
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("call-ended", {
+        endedBy: fromUserId,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // ===== Therapy Chat Handler =====
   socket.on("therapy-message", async (userMessage) => {
     try {
       console.log("Therapy message received:", userMessage);
@@ -748,8 +925,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ===== Disconnect Handler =====
   socket.on("disconnect", () => {
-    console.log("❌ Socket disconnected:", socket.id);
+    // Remove user from map
+    for (const [userId, socketId] of userSocketMap.entries()) {
+      if (socketId === socket.id) {
+        userSocketMap.delete(userId);
+        console.log(`❌ User ${userId} disconnected`);
+        console.log("📊 Active users:", Array.from(userSocketMap.keys()));
+        break;
+      }
+    }
   });
 });
 
