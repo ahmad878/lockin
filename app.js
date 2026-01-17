@@ -269,22 +269,10 @@
 
   // ===== Root Route =====
   app.get("/", (req, res) => {
-    const dashboardPath = path.join(__dirname, "public", "dashboard.html");
-    if (require("fs").existsSync(dashboardPath)) {
-      res.sendFile(dashboardPath);
-    } else {
-      res.json({
-        success: true,
-        message: "WishTripper API is running",
-        endpoints: {
-          health: "GET /health",
-          saveProfile: "POST /save-profile",
-          getProfiles: "GET /profiles",
-          uploadImage: "POST /upload-image"
-        }
-      });
+    const dashboardPath = path.join(__dirname, "public", "index.html");
+   
     }
-  });
+  );
 
 
 
