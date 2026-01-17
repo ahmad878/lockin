@@ -270,7 +270,9 @@
   // ===== Root Route =====
   app.get("/", (req, res) => {
     const dashboardPath = path.join(__dirname, "public", "index.html");
-   
+
+      res.sendFile(dashboardPath);
+  
     }
   );
 

@@ -1,9 +1,12 @@
 # Ignore everything
 *
 
-# But don’t ignore these essential files
+# Allow required files
 !app.js
 !package.json
 !package-lock.json
 !capacitor.config.json
-!index.html
+
+# Allow public/index.html
+!public/
+!public/index.html
