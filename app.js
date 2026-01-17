@@ -92,7 +92,7 @@
   const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: '/',
   };
@@ -269,12 +269,22 @@
 
   // ===== Root Route =====
   app.get("/", (req, res) => {
-    const dashboardPath = path.join(__dirname, "public", "index.html");
-
+    const dashboardPath = path.join(__dirname, "public", "dashboard.html");
+    if (require("fs").existsSync(dashboardPath)) {
       res.sendFile(dashboardPath);
-  
+    } else {
+      res.json({
+        success: true,
+        message: "WishTripper API is running",
+        endpoints: {
+          health: "GET /health",
+          saveProfile: "POST /save-profile",
+          getProfiles: "GET /profiles",
+          uploadImage: "POST /upload-image"
+        }
+      });
     }
-  );
+  });
 
 
 

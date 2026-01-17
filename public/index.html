@@ -9,7 +9,7 @@
         window.isAuthenticated = false;
         (async function() {
             try {
-                const response = await fetch('https://lockin-production.up.railway.app/check', {
+                const response = await fetch('/check', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1189,7 +1189,7 @@
             
             try {
                 // ACTUAL VERIFICATION POST REQUEST from your original code
-                const response = await fetch('https://lockin-production.up.railway.app/verify', {
+                const response = await fetch('/verify', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1449,7 +1449,7 @@
             }
             
             if (!currentUserId) {
-                console.log('User not identified. Please refresh.', 'error');
+                showToast('User not identified. Please refresh.', 'error');
                 return;
             }
             
@@ -1458,7 +1458,7 @@
             phoneCallBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             try {
-                const response = await fetch('https://lockin-production.up.railway.app/send-message-notification', {
+                const response = await fetch('/send-message-notification', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1499,7 +1499,7 @@
         logoutBtn.addEventListener('click', async function() {
             try {
                 socket.disconnect();
-                const response = await fetch('https://lockin-production.up.railway.app/logout', {
+                const response = await fetch('/logout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
