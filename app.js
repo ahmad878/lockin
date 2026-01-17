@@ -595,126 +595,135 @@ app.post('/register-fcm-token', async function(req, res) {
     res.sendFile(loginPath);
   });
 
-  app.post('/send-message-notification', async function(req, res) {
-    try {
-        const { toEmail, fromUserId, fromName } = req.body;
-        console.log('Send message notification request:', { toEmail, fromUserId, fromName });
+ app.post('/send-message-notification', async function(req, res) {
+  try {
+    const { toEmail, fromUserId, fromName } = req.body;
+    console.log('Send message notification request:', { toEmail, fromUserId, fromName });
 
-        if (!toEmail || !fromUserId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and fromUserId are required'
-            });
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        let correctedEmail = toEmail.trim().toLowerCase();
-        
-        if (!emailRegex.test(correctedEmail)) {
-            correctedEmail = correctedEmail.replace(/\s+/g, '');
-            
-            if (!correctedEmail.includes('@')) {
-                const lastDot = correctedEmail.lastIndexOf('.');
-                if (lastDot > 0) {
-                    correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
-                } else {
-                    correctedEmail = correctedEmail + '@email.com';
-                }
-            }
-            
-            if (correctedEmail.includes('@')) {
-                const atIndex = correctedEmail.indexOf('@');
-                const afterAt = correctedEmail.substring(atIndex + 1);
-                if (!afterAt || !afterAt.includes('.')) {
-                    correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
-                }
-            }
-            
-            if (!emailRegex.test(correctedEmail)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid email format'
-                });
-            }
-        }
-
-        const targetUser = await User.findOne({ email: correctedEmail });
-
-        if (!targetUser) {
-            return res.status(404).json({
-                success: false,
-                message: 'User with this email does not exist'
-            });
-        }
-
-        const targetUserId = targetUser._id.toString();
-        const recipientSocketId = userSocketMap.get(targetUserId);
-
-        // Try Socket.IO first (if user is online)
-        if (recipientSocketId) {
-            io.to(recipientSocketId).emit('incoming-call', {
-                fromUserId: fromUserId,
-                callerName: fromName || 'Someone',
-                callId: `${fromUserId}-${Date.now()}`,
-                timestamp: new Date().toISOString()
-            });
-            
-            console.log(`✅ Socket notification sent to ${targetUserId}`);
-        }
-        
-        // ALWAYS send FCM notification (works even if app is closed)
-        const fcmToken = userFCMTokens.get(targetUserId);
-        
-        if (fcmToken) {
-            const message = {
-                notification: {
-                    title: '📞 Incoming Call',
-                    body: `${fromName || 'Someone'} is calling you...`
-                },
-                data: {
-                    fromUserId: fromUserId,
-                    callerName: fromName || 'Someone',
-                    callId: `${fromUserId}-${Date.now()}`,
-                    type: 'incoming-call',
-                    timestamp: new Date().toISOString()
-                },
-                token: fcmToken,
-                android: {
-                    priority: 'high',
-                    notification: {
-                        sound: 'default',
-                        channelId: 'calls',
-                        defaultSound: true,
-                        defaultVibratePattern: true
-                    }
-                }
-            };
-            
-            try {
-                const response = await admin.messaging().send(message);
-                console.log('✅ FCM notification sent:', response);
-            } catch (fcmError) {
-                console.error('❌ FCM send error:', fcmError);
-            }
-        } else {
-            console.log('⚠️ No FCM token found for user:', targetUserId);
-        }
-        
-        return res.status(200).json({
-            success: true,
-            message: 'Notification sent successfully',
-            recipientEmail: correctedEmail,
-            socketSent: !!recipientSocketId,
-            fcmSent: !!fcmToken
-        });
-
-    } catch (error) {
-        console.error('Send message notification error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Server error while sending notification'
-        });
+    if (!toEmail || !fromUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and fromUserId are required'
+      });
     }
+
+    // Clean email
+    const correctedEmail = toEmail.trim().toLowerCase();
+
+    const targetUser = await User.findOne({ email: correctedEmail });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User with this email does not exist'
+      });
+    }
+
+    const targetUserId = targetUser._id.toString();
+    const recipientSocketId = userSocketMap.get(targetUserId);
+
+    // Try Socket.IO first (if user is online)
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('incoming-call', {
+        fromUserId: fromUserId,
+        callerName: fromName || 'Someone',
+        callId: `${fromUserId}-${Date.now()}`,
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`✅ Socket notification sent to ${targetUserId}`);
+    }
+    
+    // ALWAYS send FCM notification (works even if app is closed)
+    const fcmToken = userFCMTokens.get(targetUserId);
+    
+    if (fcmToken) {
+      // ✅ FIXED MESSAGE STRUCTURE
+      const message = {
+        // Root notification - shows when app is closed/background
+        notification: {
+          title: '📞 Incoming Call',
+          body: `${fromName || 'Someone'} is calling you...`
+        },
+        
+        // Data payload - for custom handling
+        data: {
+          fromUserId: fromUserId,
+          callerName: fromName || 'Someone',
+          callId: `${fromUserId}-${Date.now()}`,
+          type: 'incoming-call',
+          timestamp: new Date().toISOString()
+        },
+        
+        token: fcmToken,
+        
+        // ✅ CORRECTED Android config with proper key names
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            channel_id: 'calls',  // ✅ FIXED: Use channel_id not channelId
+            priority: 'high',
+            default_sound: true,  // ✅ FIXED: Use default_sound not defaultSound
+            default_vibrate_timings: true,  // ✅ FIXED: Use default_vibrate_timings
+            tag: 'incoming-call',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK'  // For Flutter apps
+          }
+        },
+        
+        // iOS config (if you support iOS later)
+        apns: {
+          headers: {
+            'apns-priority': '10',
+            'apns-push-type': 'alert'
+          },
+          payload: {
+            aps: {
+              alert: {
+                title: '📞 Incoming Call',
+                body: `${fromName || 'Someone'} is calling you...`
+              },
+              sound: 'default',
+              badge: 1,
+              'content-available': 1
+            }
+          }
+        }
+      };
+      
+      try {
+        const response = await admin.messaging().send(message);
+        console.log('✅ FCM notification sent successfully:', response);
+      } catch (fcmError) {
+        console.error('❌ FCM send error:', fcmError);
+        console.error('FCM error details:', JSON.stringify(fcmError, null, 2));
+        
+        // If token is invalid, remove it
+        if (fcmError.code === 'messaging/invalid-registration-token' || 
+            fcmError.code === 'messaging/registration-token-not-registered') {
+          userFCMTokens.delete(targetUserId);
+          console.log(`🗑️ Removed invalid FCM token for user ${targetUserId}`);
+        }
+      }
+    } else {
+      console.log('⚠️ No FCM token found for user:', targetUserId);
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Notification sent successfully',
+      recipientEmail: correctedEmail,
+      socketSent: !!recipientSocketId,
+      fcmSent: !!fcmToken
+    });
+
+  } catch (error) {
+    console.error('Send message notification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while sending notification'
+    });
+  }
 });
   app.post("/save-profile", async (req, res) => {
     console.log("====== SAVE PROFILE REQUEST ======");
