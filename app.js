@@ -11,6 +11,14 @@
   const cookieParser = require('cookie-parser');
   const JWT_SECRET = process.env.JWT_SECRET;
   const apiKey = process.env.SENDINBLUE_API_KEY;
+  const admin = require('firebase-admin');
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+console.log('✅ Firebase Admin initialized');
 
   SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
   const COOKIE_NAME = 'auth_token';
@@ -266,6 +274,34 @@
       user: decoded
     });
   });
+
+  // Register FCM token
+app.post('/register-fcm-token', async function(req, res) {
+    try {
+        const { token, userId } = req.body;
+        
+        if (!token || !userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token and userId required'
+            });
+        }
+        
+        userFCMTokens.set(userId, token);
+        console.log(`✅ FCM token registered for user ${userId}`);
+        
+        return res.status(200).json({
+            success: true,
+            message: 'FCM token registered successfully'
+        });
+    } catch (error) {
+        console.error('FCM token registration error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
 
   // ===== Root Route =====
   app.get("/", (req, res) => {
@@ -553,105 +589,127 @@
     res.sendFile(loginPath);
   });
 
-  // Send message notification by email
   app.post('/send-message-notification', async function(req, res) {
     try {
-      const { toEmail, fromUserId, fromName } = req.body;
-      console.log('Send message notification request:', { toEmail, fromUserId, fromName });
+        const { toEmail, fromUserId, fromName } = req.body;
+        console.log('Send message notification request:', { toEmail, fromUserId, fromName });
 
-      if (!toEmail || !fromUserId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email and fromUserId are required'
-        });
-      }
+        if (!toEmail || !fromUserId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and fromUserId are required'
+            });
+        }
 
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      let correctedEmail = toEmail.trim().toLowerCase();
-      
-      // Auto-correct email if invalid
-      if (!emailRegex.test(correctedEmail)) {
-        // Remove spaces
-        correctedEmail = correctedEmail.replace(/\s+/g, '');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        let correctedEmail = toEmail.trim().toLowerCase();
         
-        // If no @ symbol, add one before the last dot or at the end
-        if (!correctedEmail.includes('@')) {
-          const lastDot = correctedEmail.lastIndexOf('.');
-          if (lastDot > 0) {
-            correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
-          } else {
-            correctedEmail = correctedEmail + '@email.com';
-          }
-        }
-        
-        // If @ exists but no domain after it, add default domain
-        if (correctedEmail.includes('@')) {
-          const atIndex = correctedEmail.indexOf('@');
-          const afterAt = correctedEmail.substring(atIndex + 1);
-          if (!afterAt || !afterAt.includes('.')) {
-            correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
-          }
-        }
-        
-        // Validate again after correction
         if (!emailRegex.test(correctedEmail)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid email format'
-          });
+            correctedEmail = correctedEmail.replace(/\s+/g, '');
+            
+            if (!correctedEmail.includes('@')) {
+                const lastDot = correctedEmail.lastIndexOf('.');
+                if (lastDot > 0) {
+                    correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
+                } else {
+                    correctedEmail = correctedEmail + '@email.com';
+                }
+            }
+            
+            if (correctedEmail.includes('@')) {
+                const atIndex = correctedEmail.indexOf('@');
+                const afterAt = correctedEmail.substring(atIndex + 1);
+                if (!afterAt || !afterAt.includes('.')) {
+                    correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
+                }
+            }
+            
+            if (!emailRegex.test(correctedEmail)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid email format'
+                });
+            }
         }
-      }
 
-      // Find user by email in database
-      const targetUser = await User.findOne({ email: correctedEmail });
+        const targetUser = await User.findOne({ email: correctedEmail });
 
-      if (!targetUser) {
-        return res.status(404).json({
-          success: false,
-          message: 'User with this email does not exist'
-        });
-      }
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User with this email does not exist'
+            });
+        }
 
-      const targetUserId = targetUser._id.toString();
+        const targetUserId = targetUser._id.toString();
+        const recipientSocketId = userSocketMap.get(targetUserId);
 
-      // Check if user is online (has socket connection)
-      const recipientSocketId = userSocketMap.get(targetUserId);
-
-      if (recipientSocketId) {
-        // Send notification via socket
-        io.to(recipientSocketId).emit('message-notification', {
-          id: Date.now(),
-          fromUserId: fromUserId,
-          fromName: fromName || 'Someone',
-          message: 'You received a message',
-          timestamp: new Date().toISOString()
-        });
-
-        console.log(`✅ Message notification sent to ${targetUserId} (${correctedEmail})`);
+        // Try Socket.IO first (if user is online)
+        if (recipientSocketId) {
+            io.to(recipientSocketId).emit('incoming-call', {
+                fromUserId: fromUserId,
+                callerName: fromName || 'Someone',
+                callId: `${fromUserId}-${Date.now()}`,
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log(`✅ Socket notification sent to ${targetUserId}`);
+        }
+        
+        // ALWAYS send FCM notification (works even if app is closed)
+        const fcmToken = userFCMTokens.get(targetUserId);
+        
+        if (fcmToken) {
+            const message = {
+                notification: {
+                    title: '📞 Incoming Call',
+                    body: `${fromName || 'Someone'} is calling you...`
+                },
+                data: {
+                    fromUserId: fromUserId,
+                    callerName: fromName || 'Someone',
+                    callId: `${fromUserId}-${Date.now()}`,
+                    type: 'incoming-call',
+                    timestamp: new Date().toISOString()
+                },
+                token: fcmToken,
+                android: {
+                    priority: 'high',
+                    notification: {
+                        sound: 'default',
+                        channelId: 'calls',
+                        defaultSound: true,
+                        defaultVibratePattern: true
+                    }
+                }
+            };
+            
+            try {
+                const response = await admin.messaging().send(message);
+                console.log('✅ FCM notification sent:', response);
+            } catch (fcmError) {
+                console.error('❌ FCM send error:', fcmError);
+            }
+        } else {
+            console.log('⚠️ No FCM token found for user:', targetUserId);
+        }
         
         return res.status(200).json({
-          success: true,
-          message: 'Notification sent successfully',
-          recipientEmail: correctedEmail
+            success: true,
+            message: 'Notification sent successfully',
+            recipientEmail: correctedEmail,
+            socketSent: !!recipientSocketId,
+            fcmSent: !!fcmToken
         });
-      } else {
-        // User is not online
-        return res.status(404).json({
-          success: false,
-          message: 'User is not currently online'
-        });
-      }
 
     } catch (error) {
-      console.error('Send message notification error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Server error while sending notification'
-      });
+        console.error('Send message notification error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while sending notification'
+        });
     }
-  });
-
+});
   app.post("/save-profile", async (req, res) => {
     console.log("====== SAVE PROFILE REQUEST ======");
     console.log("Body:", req.body);
@@ -806,7 +864,7 @@
 
   // Map to store userId -> socketId for call routing
   const userSocketMap = new Map();
-
+  const userFCMTokens = new Map();
   io.on("connection", (socket) => {
     console.log("✅ Socket connected:", socket.id);
 
