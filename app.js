@@ -12,7 +12,16 @@
   const JWT_SECRET = process.env.JWT_SECRET;
   const apiKey = process.env.SENDINBLUE_API_KEY;
   const admin = require('firebase-admin');
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+    serviceAccount = require('./firebase-service-account.json');
+}
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
