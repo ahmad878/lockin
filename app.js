@@ -198,7 +198,7 @@ const server = http.createServer(app);
 // ===== Socket.IO Setup =====
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+    origin: ["http://localhost:3000", "https://lockin-production.up.railway.app"],
     methods: ["GET", "POST"],
     credentials: true
   },
