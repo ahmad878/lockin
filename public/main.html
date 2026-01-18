@@ -349,6 +349,7 @@ let ringtoneAudio = null;
 let ringtoneContext = null;
 let ringtoneOscillator = null;
 let isRingtonePlaying = false;
+let pushNotificationsSetup = false; // Prevent duplicate listener setup
 
 // ==================== TOAST NOTIFICATION ====================
 function showToast(message, type = 'info') {
@@ -480,6 +481,9 @@ async function requestPushNotificationPermission() {
             
             console.log('📱 Requesting push notification permission...');
             
+            // CRITICAL: Set up listeners BEFORE registering (to catch the token)
+            await setupPushNotifications();
+            
             let permStatus = await PushNotifications.checkPermissions();
             
             if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
@@ -516,6 +520,12 @@ async function requestPushNotificationPermission() {
 }
 
 async function setupPushNotifications() {
+    // Prevent duplicate listener setup
+    if (pushNotificationsSetup) {
+        console.log('⚠️ Push notifications already set up, skipping...');
+        return;
+    }
+    
     console.log('\n==================== SETUP PUSH NOTIFICATIONS ====================');
     console.log('🚀 Initializing push notifications...');
     console.log('📱 Is Capacitor?', window.Capacitor && window.Capacitor.isNativePlatform());
@@ -561,6 +571,7 @@ async function setupPushNotifications() {
             }
         });
         
+        pushNotificationsSetup = true;
         console.log('✅ Capacitor push notification listeners setup complete');
     }
 }
@@ -810,10 +821,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         phoneCallBtn.disabled = false;
         phoneCallBtn.innerHTML = '<i class="fas fa-phone"></i>';
         
-        // Request push notification permission and setup
-        requestPushNotificationPermission().then(() => {
-            setupPushNotifications();
-        });
+        // Request push notification permission (this also sets up listeners)
+        await requestPushNotificationPermission();
     } else {
         showToast('Please refresh the page or sign in again', 'error');
         setTimeout(() => {
@@ -835,11 +844,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         socket.emit('register-user', currentUserId);
         console.log('✅ User registered with socket:', currentUserId);
-        
-        // Setup push notifications after socket connects (ensures currentUserId is available)
-        requestPushNotificationPermission().then(() => {
-            setupPushNotifications();
-        });
     });
 
     socket.on('incoming-call', async function(callData) {
