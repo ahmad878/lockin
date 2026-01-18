@@ -588,6 +588,54 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
+  app.post('/logout', function(req, res) {
+  try {
+    const token = req.cookies[COOKIE_NAME];
+    
+    // If there's a token, try to decode it to get user info
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded && decoded.id) {
+        // Remove user from Socket.IO map
+        userSocketMap.delete(decoded.id);
+        // Remove FCM token
+        userFCMTokens.delete(decoded.id);
+        console.log(`🔓 User ${decoded.id} logged out, removed from active connections`);
+      }
+    }
+    
+    // Clear the authentication cookie
+    res.clearCookie(COOKIE_NAME, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
+    });
+    
+    console.log('✅ Logout successful, cookie cleared');
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    
+    // Even if there's an error, clear the cookie
+    res.clearCookie(COOKIE_NAME, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  }
+});
 
 
   app.get('/login', function(req, res) {

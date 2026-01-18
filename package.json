@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
-    "@capacitor/cli": "^2.5.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/geolocation": "^8.0.0",
     "@capacitor/local-notifications": "^8.0.0",
@@ -30,5 +29,8 @@
     "sib-api-v3-sdk": "^8.5.0",
     "socket.io": "^4.8.3",
     "together-ai": "^0.16.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.1"
   }
 }
