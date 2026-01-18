@@ -705,15 +705,15 @@ app.post('/register-fcm-token', async function(req, res) {
         
         token: fcmToken,
         
-        // ✅ CORRECTED Android config with proper key names
+        // ✅ Android config with ringtone
         android: {
           priority: 'high',
           notification: {
             sound: 'default',
-            channel_id: 'calls',  // ✅ FIXED: Use channel_id not channelId
+            channel_id: 'calls',  // ✅ Uses the calls channel configured in MainActivity with ringtone
             priority: 'high',
-            default_sound: true,  // ✅ FIXED: Use default_sound not defaultSound
-            default_vibrate_timings: true,  // ✅ FIXED: Use default_vibrate_timings
+            default_sound: true,
+            default_vibrate_timings: true,
             tag: 'incoming-call',
             click_action: 'FLUTTER_NOTIFICATION_CLICK'  // For Flutter apps
           }
