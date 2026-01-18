@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@capacitor/local-notifications@latest/dist/capacitor-local-notifications.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/push-notifications@latest/dist/plugin.js"></script>
     <style>
         * {
             margin: 0;
@@ -554,18 +554,26 @@ async function setupPushNotifications() {
     }
 }
 
-function registerFCMToken(token) {
+function registerFCMToken(token, retryCount = 0) {
     if (!currentUserId) {
         console.warn('⚠️ User ID not available yet, will retry...');
-        setTimeout(() => {
-            if (currentUserId) {
-                registerFCMToken(token);
-            }
-        }, 2000);
+        if (retryCount < 5) {
+            setTimeout(() => {
+                if (currentUserId) {
+                    registerFCMToken(token, retryCount);
+                } else {
+                    registerFCMToken(token, retryCount + 1);
+                }
+            }, 2000);
+        } else {
+            console.error('❌ Failed to register FCM token after 5 retries - no currentUserId');
+            showToast('Failed to setup notifications', 'error');
+        }
         return;
     }
     
     console.log('📤 Registering FCM token for user:', currentUserId);
+    console.log('🔑 FCM Token:', token);
     
     fetch('https://lockin-production.up.railway.app/register-fcm-token', {
         method: 'POST',
@@ -578,12 +586,22 @@ function registerFCMToken(token) {
     })
     .then(res => res.json())
     .then(data => {
-        console.log('✅ FCM token registered on server:', data);
-        showToast('Ready to receive calls!', 'success');
+        if (data.success) {
+            console.log('✅ FCM token registered on server:', data);
+            showToast('Ready to receive calls!', 'success');
+        } else {
+            console.error('❌ Server rejected FCM token:', data);
+            showToast('Notification setup incomplete', 'error');
+        }
     })
     .catch(err => {
         console.error('❌ FCM token registration failed:', err);
         showToast('Failed to setup notifications', 'error');
+        // Retry once on network error
+        if (retryCount < 1) {
+            console.log('🔄 Retrying FCM registration...');
+            setTimeout(() => registerFCMToken(token, retryCount + 1), 3000);
+        }
     });
 }
 
@@ -785,6 +803,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         socket.emit('register-user', currentUserId);
         console.log('✅ User registered with socket:', currentUserId);
+        
+        // Setup push notifications after socket connects (ensures currentUserId is available)
+        requestPushNotificationPermission().then(() => {
+            setupPushNotifications();
+        });
     });
 
     socket.on('incoming-call', async function(callData) {

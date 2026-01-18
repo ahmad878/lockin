@@ -159,6 +159,10 @@ console.log('✅ Firebase Admin initialized');
       type: Boolean,
       default: false
     },
+    fcmToken: {
+      type: String,
+      default: null
+    },
     createdAt: {
       type: Date,
       default: Date.now
@@ -293,7 +297,12 @@ app.post('/register-fcm-token', async function(req, res) {
             });
         }
         
+        // Save to database for persistence
+        await User.findByIdAndUpdate(userId, { fcmToken: token });
+        
+        // Also keep in memory for quick access
         userFCMTokens.set(userId, token);
+        
         console.log(`✅ FCM token registered for user ${userId}`);
         
         return res.status(200).json({
@@ -598,8 +607,7 @@ app.post('/register-fcm-token', async function(req, res) {
       if (decoded && decoded.id) {
         // Remove user from Socket.IO map
         userSocketMap.delete(decoded.id);
-        // Remove FCM token
-        userFCMTokens.delete(decoded.id);
+        // Keep FCM token in database - don't delete it (needed for notifications when logged out)
         console.log(`🔓 User ${decoded.id} logged out, removed from active connections`);
       }
     }
@@ -688,18 +696,24 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     // ALWAYS send FCM notification (works even if app is closed)
-    const fcmToken = userFCMTokens.get(targetUserId);
+    let fcmToken = userFCMTokens.get(targetUserId);
+    
+    // If not in memory, try to get from database
+    if (!fcmToken) {
+      const user = await User.findById(targetUserId);
+      if (user && user.fcmToken) {
+        fcmToken = user.fcmToken;
+        // Cache it in memory for next time
+        userFCMTokens.set(targetUserId, fcmToken);
+        console.log(`📥 Retrieved FCM token from database for user ${targetUserId}`);
+      }
+    }
     
     if (fcmToken) {
-      // ✅ FIXED MESSAGE STRUCTURE
       const message = {
-        // Root notification - shows when app is closed/background
-        notification: {
-          title: '📞 Incoming Call',
-          body: `${fromName || 'Someone'} is calling you...`
-        },
+        token: fcmToken,
         
-        // Data payload - for custom handling
+        // Data payload - for custom handling when app is open
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
@@ -708,19 +722,17 @@ app.post('/register-fcm-token', async function(req, res) {
           timestamp: new Date().toISOString()
         },
         
-        token: fcmToken,
-        
-        // ✅ Android config with ringtone
+        // Android config - notification will use channel settings (ringtone from MainActivity)
         android: {
           priority: 'high',
           notification: {
-            sound: 'default',
-            channel_id: 'calls',  // ✅ Uses the calls channel configured in MainActivity with ringtone
-            priority: 'high',
-            default_sound: true,
-            default_vibrate_timings: true,
+            title: '📞 Incoming Call',
+            body: `${fromName || 'Someone'} is calling you...`,
+            channelId: 'calls',  // This channel has ringtone configured in MainActivity.java
+            priority: 'max',
+            visibility: 'public',
             tag: 'incoming-call',
-            click_action: 'FLUTTER_NOTIFICATION_CLICK'  // For Flutter apps
+            sticky: false
           }
         },
         
@@ -751,10 +763,11 @@ app.post('/register-fcm-token', async function(req, res) {
         console.error('❌ FCM send error:', fcmError);
         console.error('FCM error details:', JSON.stringify(fcmError, null, 2));
         
-        // If token is invalid, remove it
+        // If token is invalid, remove it from both memory and database
         if (fcmError.code === 'messaging/invalid-registration-token' || 
             fcmError.code === 'messaging/registration-token-not-registered') {
           userFCMTokens.delete(targetUserId);
+          await User.findByIdAndUpdate(targetUserId, { fcmToken: null });
           console.log(`🗑️ Removed invalid FCM token for user ${targetUserId}`);
         }
       }
