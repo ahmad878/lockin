@@ -476,8 +476,19 @@ async function requestPushNotificationPermission() {
     try {
         const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
         
+        console.log('🔍 requestPushNotificationPermission called');
+        console.log('🔍 isCapacitor:', isCapacitor);
+        console.log('🔍 window.Capacitor:', window.Capacitor);
+        console.log('🔍 Capacitor.Plugins:', window.Capacitor?.Plugins);
+        
         if (isCapacitor) {
             const { PushNotifications } = window.Capacitor.Plugins;
+            
+            if (!PushNotifications) {
+                console.error('❌ PushNotifications plugin not available!');
+                showToast('Push plugin not found', 'error');
+                return false;
+            }
             
             console.log('📱 Requesting push notification permission...');
             
@@ -485,18 +496,22 @@ async function requestPushNotificationPermission() {
             await setupPushNotifications();
             
             let permStatus = await PushNotifications.checkPermissions();
+            console.log('📋 Permission status:', JSON.stringify(permStatus));
             
             if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+                console.log('🔔 Requesting permissions...');
                 permStatus = await PushNotifications.requestPermissions();
+                console.log('📋 New permission status:', JSON.stringify(permStatus));
             }
             
             if (permStatus.receive === 'granted') {
+                console.log('✅ Permission granted, calling register()...');
                 await PushNotifications.register();
-                console.log('✅ Push notifications enabled');
+                console.log('✅ register() called successfully');
                 showToast('Notifications enabled', 'success');
                 return true;
             } else {
-                console.warn('⚠️ Push notification permission denied');
+                console.warn('⚠️ Push notification permission denied:', permStatus.receive);
                 showToast('Please enable notifications in settings', 'error');
                 return false;
             }
