@@ -642,6 +642,11 @@ app.post('/register-fcm-token', async function(req, res) {
     const loginPath = path.join(__dirname, 'public', 'login.html');
     res.sendFile(loginPath);
   });
+   app.get('/main', function(req, res) {
+    const mainPath = path.join(__dirname, 'public', 'main.html');
+    res.sendFile(mainPath);
+  });
+
 
  app.post('/send-message-notification', async function(req, res) {
   try {
