@@ -655,9 +655,7 @@ app.post('/register-fcm-token', async function(req, res) {
       });
     }
 
-    // Clean email
     const correctedEmail = toEmail.trim().toLowerCase();
-
     const targetUser = await User.findOne({ email: correctedEmail });
 
     if (!targetUser) {
@@ -670,7 +668,7 @@ app.post('/register-fcm-token', async function(req, res) {
     const targetUserId = targetUser._id.toString();
     const recipientSocketId = userSocketMap.get(targetUserId);
 
-    // Try Socket.IO first (if user is online)
+    // Socket.IO for when app is open
     if (recipientSocketId) {
       io.to(recipientSocketId).emit('incoming-call', {
         fromUserId: fromUserId,
@@ -682,19 +680,16 @@ app.post('/register-fcm-token', async function(req, res) {
       console.log(`✅ Socket notification sent to ${targetUserId}`);
     }
     
-    // ALWAYS send FCM notification (works even if app is closed)
+    // FCM for when app is closed/background
     const fcmToken = userFCMTokens.get(targetUserId);
     
     if (fcmToken) {
-      // ✅ FIXED MESSAGE STRUCTURE
       const message = {
-        // Root notification - shows when app is closed/background
         notification: {
           title: '📞 Incoming Call',
           body: `${fromName || 'Someone'} is calling you...`
         },
         
-        // Data payload - for custom handling
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
@@ -705,21 +700,26 @@ app.post('/register-fcm-token', async function(req, res) {
         
         token: fcmToken,
         
-        // ✅ CORRECTED Android config with proper key names
+        // ✅ ANDROID - Play ringtone sound
         android: {
           priority: 'high',
           notification: {
-            sound: 'default',
-            channel_id: 'calls',  // ✅ FIXED: Use channel_id not channelId
-            priority: 'high',
-            default_sound: true,  // ✅ FIXED: Use default_sound not defaultSound
-            default_vibrate_timings: true,  // ✅ FIXED: Use default_vibrate_timings
+            sound: 'ringtone',  // ✅ This will play the ringtone sound
+            channel_id: 'incoming_calls',
+            priority: 'max',
+            default_sound: false,  // Use custom sound
+            default_vibrate_timings: false,
+            vibrate_timings_millis: [0, 1000, 500, 1000, 500, 1000],  // Vibration pattern
             tag: 'incoming-call',
-            click_action: 'FLUTTER_NOTIFICATION_CLICK'  // For Flutter apps
+            sticky: true,  // Keep notification visible
+            notification_priority: 'PRIORITY_MAX',
+            visibility: 'public',
+            // ✅ Full screen intent for call screen
+            notification_count: 1
           }
         },
         
-        // iOS config (if you support iOS later)
+        // ✅ iOS - Play ringtone sound
         apns: {
           headers: {
             'apns-priority': '10',
@@ -731,9 +731,15 @@ app.post('/register-fcm-token', async function(req, res) {
                 title: '📞 Incoming Call',
                 body: `${fromName || 'Someone'} is calling you...`
               },
-              sound: 'default',
+              sound: {
+                critical: 1,  // ✅ Plays even in Do Not Disturb
+                name: 'ringtone.caf',  // ✅ Custom ringtone file
+                volume: 1.0
+              },
               badge: 1,
-              'content-available': 1
+              'content-available': 1,
+              'mutable-content': 1,
+              category: 'INCOMING_CALL'
             }
           }
         }
@@ -741,12 +747,10 @@ app.post('/register-fcm-token', async function(req, res) {
       
       try {
         const response = await admin.messaging().send(message);
-        console.log('✅ FCM notification sent successfully:', response);
+        console.log('✅ FCM notification with ringtone sent:', response);
       } catch (fcmError) {
         console.error('❌ FCM send error:', fcmError);
-        console.error('FCM error details:', JSON.stringify(fcmError, null, 2));
         
-        // If token is invalid, remove it
         if (fcmError.code === 'messaging/invalid-registration-token' || 
             fcmError.code === 'messaging/registration-token-not-registered') {
           userFCMTokens.delete(targetUserId);
