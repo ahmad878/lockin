@@ -311,7 +311,7 @@ app.post('/register-fcm-token', async function(req, res) {
 
   // ===== Root Route =====
   app.get("/", (req, res) => {
-    const dashboardPath = path.join(__dirname, "public", "dashboard.html");
+    const dashboardPath = path.join(__dirname, "public", "index.html");
     if (require("fs").existsSync(dashboardPath)) {
       res.sendFile(dashboardPath);
     } else {
