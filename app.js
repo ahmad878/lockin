@@ -287,30 +287,65 @@ console.log('✅ Firebase Admin initialized');
 
   // Register FCM token
 app.post('/register-fcm-token', async function(req, res) {
+    console.log('\n==================== REGISTER FCM TOKEN REQUEST ====================');
+    console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🍪 Has cookies:', !!req.cookies);
+    console.log('====================================================================\n');
+    
     try {
         const { token, userId } = req.body;
         
         if (!token || !userId) {
+            console.error('❌ Missing token or userId');
             return res.status(400).json({
                 success: false,
                 message: 'Token and userId required'
             });
         }
         
+        console.log('💾 Saving FCM token to database...');
+        console.log('👤 User ID:', userId);
+        console.log('🔑 Token:', token);
+        
         // Save to database for persistence
-        await User.findByIdAndUpdate(userId, { fcmToken: token });
+        const updateResult = await User.findByIdAndUpdate(
+            userId, 
+            { fcmToken: token },
+            { new: true }
+        );
+        
+        if (!updateResult) {
+            console.error('❌ User not found in database:', userId);
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        
+        console.log('✅ Database updated successfully');
+        console.log('📋 User document:', JSON.stringify({
+            id: updateResult._id,
+            email: updateResult.email,
+            hasFCMToken: !!updateResult.fcmToken
+        }, null, 2));
         
         // Also keep in memory for quick access
         userFCMTokens.set(userId, token);
+        console.log('📊 Memory cache updated');
+        console.log('📊 Total tokens in memory:', userFCMTokens.size);
         
-        console.log(`✅ FCM token registered for user ${userId}`);
+        console.log('✅ FCM token registered for user', userId);
+        console.log('====================================================================\n');
         
         return res.status(200).json({
             success: true,
             message: 'FCM token registered successfully'
         });
     } catch (error) {
-        console.error('FCM token registration error:', error);
+        console.error('\n==================== FCM TOKEN REGISTRATION ERROR ====================');
+        console.error('❌ Error:', error);
+        console.error('🔍 Stack:', error.stack);
+        console.error('=====================================================================\n');
         return res.status(500).json({
             success: false,
             message: 'Server error'
@@ -696,18 +731,41 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     // ALWAYS send FCM notification (works even if app is closed)
+    console.log('\n==================== FCM TOKEN LOOKUP ====================');
+    console.log('🔍 Looking for FCM token for user:', targetUserId);
+    
     let fcmToken = userFCMTokens.get(targetUserId);
+    console.log('📊 Memory cache result:', fcmToken ? 'FOUND' : 'NOT FOUND');
     
     // If not in memory, try to get from database
     if (!fcmToken) {
+      console.log('💾 Checking database for FCM token...');
       const user = await User.findById(targetUserId);
-      if (user && user.fcmToken) {
-        fcmToken = user.fcmToken;
-        // Cache it in memory for next time
-        userFCMTokens.set(targetUserId, fcmToken);
-        console.log(`📥 Retrieved FCM token from database for user ${targetUserId}`);
+      console.log('👤 User found in DB:', !!user);
+      
+      if (user) {
+        console.log('📋 User details:', JSON.stringify({
+          id: user._id,
+          email: user.email,
+          hasFCMToken: !!user.fcmToken,
+          tokenPreview: user.fcmToken ? user.fcmToken.substring(0, 20) + '...' : 'null'
+        }, null, 2));
+        
+        if (user.fcmToken) {
+          fcmToken = user.fcmToken;
+          // Cache it in memory for next time
+          userFCMTokens.set(targetUserId, fcmToken);
+          console.log('✅ Retrieved FCM token from database and cached it');
+        } else {
+          console.log('❌ User has no FCM token in database');
+        }
+      } else {
+        console.log('❌ User not found in database');
       }
+    } else {
+      console.log('✅ Using cached FCM token');
     }
+    console.log('==========================================================\n');
     
     if (fcmToken) {
       const message = {

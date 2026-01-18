@@ -516,6 +516,12 @@ async function requestPushNotificationPermission() {
 }
 
 async function setupPushNotifications() {
+    console.log('\n==================== SETUP PUSH NOTIFICATIONS ====================');
+    console.log('🚀 Initializing push notifications...');
+    console.log('📱 Is Capacitor?', window.Capacitor && window.Capacitor.isNativePlatform());
+    console.log('👤 Current User ID:', currentUserId);
+    console.log('==================================================================\n');
+    
     const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
     
     if (isCapacitor) {
@@ -523,7 +529,12 @@ async function setupPushNotifications() {
         const { PushNotifications } = window.Capacitor.Plugins;
         
         await PushNotifications.addListener('registration', (token) => {
-            console.log('📱 FCM Token received:', token.value);
+            console.log('\n==================== FCM TOKEN RECEIVED ====================');
+            console.log('📨 RAW TOKEN OBJECT:', JSON.stringify(token, null, 2));
+            console.log('🔑 TOKEN VALUE:', token.value);
+            console.log('👤 CURRENT USER ID:', currentUserId);
+            console.log('🕒 TIMESTAMP:', new Date().toISOString());
+            console.log('==========================================================\n');
             registerFCMToken(token.value);
         });
         
@@ -555,13 +566,21 @@ async function setupPushNotifications() {
 }
 
 function registerFCMToken(token, retryCount = 0) {
+    console.log('\n==================== REGISTER FCM TOKEN ATTEMPT ====================');
+    console.log('🔢 Retry count:', retryCount);
+    console.log('🔑 Token:', token);
+    console.log('👤 Current User ID:', currentUserId);
+    console.log('===================================================================\n');
+    
     if (!currentUserId) {
         console.warn('⚠️ User ID not available yet, will retry...');
         if (retryCount < 5) {
             setTimeout(() => {
                 if (currentUserId) {
+                    console.log('✅ User ID now available, registering token...');
                     registerFCMToken(token, retryCount);
                 } else {
+                    console.log('❌ Still no User ID, retry', retryCount + 1);
                     registerFCMToken(token, retryCount + 1);
                 }
             }, 2000);
@@ -572,8 +591,10 @@ function registerFCMToken(token, retryCount = 0) {
         return;
     }
     
-    console.log('📤 Registering FCM token for user:', currentUserId);
-    console.log('🔑 FCM Token:', token);
+    console.log('\n==================== SENDING FCM TOKEN TO SERVER ====================');
+    console.log('📤 URL: https://lockin-production.up.railway.app/register-fcm-token');
+    console.log('📜 Payload:', JSON.stringify({ token: token, userId: currentUserId }, null, 2));
+    console.log('=====================================================================\n');
     
     fetch('https://lockin-production.up.railway.app/register-fcm-token', {
         method: 'POST',
@@ -584,8 +605,15 @@ function registerFCMToken(token, retryCount = 0) {
             userId: currentUserId
         })
     })
-    .then(res => res.json())
+    .then(res => {
+        console.log('📥 Server response status:', res.status);
+        return res.json();
+    })
     .then(data => {
+        console.log('\n==================== SERVER RESPONSE ====================');
+        console.log('📊 Response:', JSON.stringify(data, null, 2));
+        console.log('=========================================================\n');
+        
         if (data.success) {
             console.log('✅ FCM token registered on server:', data);
             showToast('Ready to receive calls!', 'success');
@@ -595,7 +623,11 @@ function registerFCMToken(token, retryCount = 0) {
         }
     })
     .catch(err => {
-        console.error('❌ FCM token registration failed:', err);
+        console.error('\n==================== REGISTRATION ERROR ====================');
+        console.error('❌ Error:', err);
+        console.error('🔍 Error details:', JSON.stringify(err, null, 2));
+        console.error('============================================================\n');
+        
         showToast('Failed to setup notifications', 'error');
         // Retry once on network error
         if (retryCount < 1) {
