@@ -576,6 +576,9 @@ async function setupPushNotifications() {
     }
 }
 
+// Store pending FCM token for registration
+let pendingFCMToken = null;
+
 function registerFCMToken(token, retryCount = 0) {
     console.log('\n==================== REGISTER FCM TOKEN ATTEMPT ====================');
     console.log('🔢 Retry count:', retryCount);
@@ -583,20 +586,23 @@ function registerFCMToken(token, retryCount = 0) {
     console.log('👤 Current User ID:', currentUserId);
     console.log('===================================================================\n');
     
+    // Store the token for later if user ID isn't ready
+    pendingFCMToken = token;
+    
     if (!currentUserId) {
         console.warn('⚠️ User ID not available yet, will retry...');
-        if (retryCount < 5) {
+        if (retryCount < 10) {  // Increased retries
             setTimeout(() => {
                 if (currentUserId) {
                     console.log('✅ User ID now available, registering token...');
-                    registerFCMToken(token, retryCount);
+                    registerFCMToken(token, 0);  // FIXED: Reset retry count when user ID becomes available
                 } else {
                     console.log('❌ Still no User ID, retry', retryCount + 1);
                     registerFCMToken(token, retryCount + 1);
                 }
-            }, 2000);
+            }, 1000);  // Reduced delay to 1 second
         } else {
-            console.error('❌ Failed to register FCM token after 5 retries - no currentUserId');
+            console.error('❌ Failed to register FCM token after 10 retries - no currentUserId');
             showToast('Failed to setup notifications', 'error');
         }
         return;
@@ -627,6 +633,7 @@ function registerFCMToken(token, retryCount = 0) {
         
         if (data.success) {
             console.log('✅ FCM token registered on server:', data);
+            pendingFCMToken = null;  // Clear pending token on success
             showToast('Ready to receive calls!', 'success');
         } else {
             console.error('❌ Server rejected FCM token:', data);
@@ -640,12 +647,20 @@ function registerFCMToken(token, retryCount = 0) {
         console.error('============================================================\n');
         
         showToast('Failed to setup notifications', 'error');
-        // Retry once on network error
-        if (retryCount < 1) {
+        // Retry on network error
+        if (retryCount < 3) {
             console.log('🔄 Retrying FCM registration...');
             setTimeout(() => registerFCMToken(token, retryCount + 1), 3000);
         }
     });
+}
+
+// Function to retry FCM registration with stored token
+function retryPendingFCMRegistration() {
+    if (pendingFCMToken && currentUserId) {
+        console.log('🔄 Retrying pending FCM token registration...');
+        registerFCMToken(pendingFCMToken, 0);
+    }
 }
 
 // ==================== FETCH USER DATA ====================
@@ -811,7 +826,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     phoneCallBtn.disabled = true;
     phoneCallBtn.innerHTML = '<i class="fas fa-user-clock"></i>';
 
-    // Fetch user data
+    // Fetch user data FIRST before setting up notifications
     const userData = await fetchUserData();
     if (userData && userData.id) {
         currentUserId = userData.id;
@@ -823,6 +838,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Request push notification permission (this also sets up listeners)
         await requestPushNotificationPermission();
+        
+        // If there's a pending FCM token, register it now
+        retryPendingFCMRegistration();
     } else {
         showToast('Please refresh the page or sign in again', 'error');
         setTimeout(() => {
