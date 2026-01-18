@@ -10,3 +10,4 @@
 # Allow public/index.html
 !public/
 !public/index.html
+!public/login.html

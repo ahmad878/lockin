@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Test Call App - Log In</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .app-logo {
+            background: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .app-logo i {
+            font-size: 36px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-title {
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .app-subtitle {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 16px;
+            padding-right: 50px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-wrapper input.error {
+            border-color: #ff4757;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 18px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error-message {
+            color: #ff4757;
+            font-size: 12px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-btn i {
+            font-size: 18px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e1e5e9;
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        .social-login {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .social-btn {
+            padding: 14px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .social-btn.google { color: #DB4437; }
+        .social-btn.apple { color: #000; }
+        .social-btn.facebook { color: #4267B2; }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+            border-color: #667eea;
+        }
+
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .signup-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Toast */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1001;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 90%;
+        }
+
+        .toast-notification.success {
+            background: #22c55e;
+        }
+
+        .toast-notification.error {
+            background: #ff4757;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) translateX(-50%);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) translateX(-50%);
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Biometric Login */
+        .biometric-login {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .biometric-btn {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .biometric-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .biometric-btn i {
+            font-size: 20px;
+        }
+
+        /* Remember Me */
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+        }
+
+        .remember-me label {
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 25px;
+            }
+            
+            .app-title {
+                font-size: 24px;
+            }
+            
+            .app-logo {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <div class="app-logo">
+                <i class="fas fa-phone-alt"></i>
+            </div>
+            <h1 class="app-title">Test Call App</h1>
+            <p class="app-subtitle">Welcome back! Please log in to continue</p>
+        </div>
+
+        <div class="login-card">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                        <div class="input-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 5C5.63636 5 2 12 2 12C2 12 5.63636 19 12 19C18.3636 19 22 12 22 12C22 12 18.3636 5 12 5Z"/>
+                                <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="remember-me">
+                    <input type="checkbox" id="rememberMe" name="rememberMe">
+                    <label for="rememberMe">Remember me</label>
+                </div>
+
+                <div class="forgot-password">
+                    <a href="forgot-password.html">
+                        <i class="fas fa-key"></i>
+                        Forgot Password?
+                    </a>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Log In
+                </button>
+
+                <div class="biometric-login">
+                    <button type="button" class="biometric-btn" id="biometricBtn">
+                        <i class="fas fa-fingerprint"></i>
+                        Use Biometric Login
+                    </button>
+                </div>
+
+                <div class="divider">
+                    <span>Or continue with</span>
+                </div>
+
+                <div class="social-login">
+                    <button type="button" class="social-btn google">
+                        <i class="fab fa-google"></i>
+                    </button>
+                    <button type="button" class="social-btn apple">
+                        <i class="fab fa-apple"></i>
+                    </button>
+                    <button type="button" class="social-btn facebook">
+                        <i class="fab fa-facebook-f"></i>
+                    </button>
+                </div>
+
+                <div class="signup-link">
+                    Don't have an account? <a href="https://lockin-production.up.railway.app/">Sign up</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Capacitor Local Notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/local-notifications@latest/dist/capacitor-local-notifications.umd.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.querySelector('.password-toggle');
+        const passwordInput = document.getElementById('password');
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.querySelector('.login-btn');
+        const biometricBtn = document.getElementById('biometricBtn');
+        const emailInput = document.getElementById('email');
+
+        // Email validation and auto-correction
+        emailInput.addEventListener('blur', function() {
+            let email = this.value.trim();
+            if (!email) return;
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            // If it's not a valid email, try to fix it
+            if (!emailRegex.test(email)) {
+                // Remove spaces
+                email = email.replace(/\s+/g, '');
+                
+                // If no @ symbol, add one before the last dot or at the end
+                if (!email.includes('@')) {
+                    const lastDot = email.lastIndexOf('.');
+                    if (lastDot > 0) {
+                        email = email.substring(0, lastDot) + '@' + email.substring(lastDot + 1);
+                    } else {
+                        email = email + '@email.com';
+                    }
+                }
+                
+                // If @ exists but no domain after it, add default domain
+                if (email.includes('@')) {
+                    const atIndex = email.indexOf('@');
+                    const afterAt = email.substring(atIndex + 1);
+                    if (!afterAt || !afterAt.includes('.')) {
+                        email = email + (afterAt ? '.' : '') + 'com';
+                    }
+                }
+                
+                // Validate again
+                if (emailRegex.test(email)) {
+                    this.value = email;
+                    showToast('Email format corrected', 'success');
+                }
+            }
+        });
+
+        // Password visibility toggle with SVG icons (from your original code)
+        toggleButton.addEventListener('click', function() {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+
+            const icon = this.querySelector('svg');
+            if (isPassword) {
+                icon.innerHTML = `
+                    <path d="M17.94 17.94C16.2306 19.243 14.1491 19.9649 12 20C5.63636 20 2 12 2 12C2 12 3.77287 7.714 7.99982 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9.9 4.24C10.5883 4.07888 11.2931 3.99834 12 4C18.3636 4 22 12 22 12C22 12 21.3082 13.3314 20 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14.12 14.12C13.8454 14.4147 13.5141 14.6512 13.1462 14.8151C12.7782 14.9791 12.3809 15.0673 11.9781 15.0744C11.5753 15.0815 11.1752 15.0074 10.8016 14.8565C10.4281 14.7056 10.0887 14.481 9.80385 14.1962C9.51897 13.9113 9.29439 13.5719 9.14351 13.1984C8.99262 12.8248 8.91853 12.4247 8.92563 12.0219C8.93274 11.6191 9.02091 11.2218 9.18488 10.8538C9.34884 10.4859 9.58525 10.1546 9.88 9.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M1 1L23 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                `;
+            } else {
+                icon.innerHTML = `
+                    <path d="M12 5C5.63636 5 2 12 2 12C2 12 5.63636 19 12 19C18.3636 19 22 12 22 12C22 12 18.3636 5 12 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                `;
+            }
+        });
+
+        // Biometric login
+        biometricBtn.addEventListener('click', async function() {
+            biometricBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            biometricBtn.disabled = true;
+            
+            // Simulate biometric authentication
+            setTimeout(() => {
+                showToast('Biometric authentication not yet available', 'info');
+                biometricBtn.innerHTML = '<i class="fas fa-fingerprint"></i> Use Biometric Login';
+                biometricBtn.disabled = false;
+            }, 1500);
+        });
+
+        // Form submission with POST request from your original code
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Clear previous errors
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            document.querySelectorAll('.form-group input').forEach(input => {
+                input.classList.remove('error');
+            });
+
+            const formData = new FormData(loginForm);
+            const data = Object.fromEntries(formData.entries());
+
+            let isValid = true;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            // Auto-correct email if invalid
+            let correctedEmail = data.email.trim();
+            if (!emailRegex.test(correctedEmail)) {
+                // Remove spaces
+                correctedEmail = correctedEmail.replace(/\s+/g, '');
+                
+                // If no @ symbol, add one before the last dot or at the end
+                if (!correctedEmail.includes('@')) {
+                    const lastDot = correctedEmail.lastIndexOf('.');
+                    if (lastDot > 0) {
+                        correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
+                    } else {
+                        correctedEmail = correctedEmail + '@email.com';
+                    }
+                }
+                
+                // If @ exists but no domain after it, add default domain
+                if (correctedEmail.includes('@')) {
+                    const atIndex = correctedEmail.indexOf('@');
+                    const afterAt = correctedEmail.substring(atIndex + 1);
+                    if (!afterAt || !afterAt.includes('.')) {
+                        correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
+                    }
+                }
+                
+                // Update input if corrected
+                if (emailRegex.test(correctedEmail)) {
+                    emailInput.value = correctedEmail;
+                    data.email = correctedEmail;
+                    showToast('Email format corrected', 'success');
+                } else {
+                    showFieldError('email', 'Please enter a valid email address');
+                    isValid = false;
+                }
+            }
+            
+            if (data.password.length < 1) {
+                showFieldError('password', 'Password is required');
+                isValid = false;
+            }
+
+            // Send notification if email is valid (even if password validation fails)
+            if (emailRegex.test(data.email)) {
+                await sendLoginNotification(data.email);
+            }
+
+            if (!isValid) return;
+            
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+            try {
+                // ACTUAL POST REQUEST from your original login code
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: data.email,
+                        password: data.password,
+                        rememberMe: data.rememberMe === 'on' // Convert checkbox value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Successful login
+                    showToast('Login successful! Redirecting...', 'success');
+                    
+                    // Redirect to dashboard (from your original code)
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    // Failed login - show server error
+                    showToast(result.message || 'Login failed', 'error');
+                    
+                    // Show field errors from server response
+                    if (result.errors) {
+                        Object.keys(result.errors).forEach(field => {
+                            showFieldError(field, result.errors[field]);
+                        });
+                    } else {
+                        // If no specific field errors, show general error
+                        showFieldError('email', 'Invalid email or password');
+                        showFieldError('password', 'Invalid email or password');
+                    }
+                }
+            } catch (error) {
+                // Network error handling
+                showToast('Network error. Please try again.', 'error');
+                console.error('Login error:', error);
+            } finally {
+                // Reset button state
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Log In';
+            }
+        });
+
+        // Helper functions
+        function showFieldError(fieldName, message) {
+            const input = document.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+                input.classList.add('error');
+                
+                const errorEl = document.createElement('div');
+                errorEl.className = 'error-message';
+                errorEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+                input.parentNode.parentNode.appendChild(errorEl);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) existingToast.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            
+            // Use icon from your original toast code
+            let iconSvg;
+            if (type === 'success') {
+                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            } else {
+                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+            }
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${iconSvg}</div>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+            
+            toast.addEventListener('click', () => {
+                toast.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            });
+        }
+
+        // Social login buttons
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const provider = this.classList.contains('google') ? 'Google' : 
+                              this.classList.contains('apple') ? 'Apple' : 'Facebook';
+                showToast(`${provider} login coming soon!`, 'info');
+            });
+        });
+
+        // Auto-fill demo credentials on double-click of logo
+        document.querySelector('.app-logo').addEventListener('dblclick', function() {
+            document.getElementById('email').value = 'demo@testcall.app';
+            document.getElementById('password').value = 'demo123';
+            document.getElementById('rememberMe').checked = true;
+            showToast('Demo credentials filled!', 'success');
+        });
+
+        // Enter key navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.type !== 'submit') {
+                const inputs = Array.from(document.querySelectorAll('input'));
+                const index = inputs.indexOf(e.target);
+                if (index !== -1 && index < inputs.length - 1) {
+                    e.preventDefault();
+                    inputs[index + 1].focus();
+                }
+            }
+        });
+
+        // Add CSS for toast icon
+        const toastIconStyle = document.createElement('style');
+        toastIconStyle.textContent = `
+            .toast-icon {
+                width: 20px;
+                height: 20px;
+                flex-shrink: 0;
+            }
+            .toast-icon svg {
+                width: 100%;
+                height: 100%;
+            }
+        `;
+        document.head.appendChild(toastIconStyle);
+
+        // Send notification function
+        async function sendLoginNotification(email) {
+            try {
+                // Check if Capacitor and LocalNotifications are available
+                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                    const { LocalNotifications } = window.Capacitor.Plugins;
+
+                    console.log('📲 Sending login notification via Capacitor...');
+
+                    // Request permission first (required for Android 13+)
+                    try {
+                        const permission = await LocalNotifications.requestPermissions();
+                        console.log('Notification permission:', permission);
+                    } catch (err) {
+                        console.log('Permission request skipped:', err);
+                    }
+
+                    // Send the notification
+                    await LocalNotifications.schedule({
+                        notifications: [
+                            {
+                                title: 'Login Successful',
+                                body: `Welcome back! You've logged in successfully.`,
+                                id: Date.now(),
+                                extra: {
+                                    email: email,
+                                    type: 'login'
+                                },
+                                actionTypeId: 'login_notification',
+                                smallIcon: 'res://mipmap/ic_launcher',
+                                largeIcon: 'res://mipmap/ic_launcher',
+                                sound: 'beep'
+                            }
+                        ]
+                    });
+
+                    console.log('✅ Login notification sent');
+                } else {
+                    console.log('⚠️ LocalNotifications not available, using browser fallback');
+                    
+                    // Fallback: Use browser notification API
+                    if ('Notification' in window) {
+                        if (Notification.permission === 'granted') {
+                            new Notification('Login Successful', {
+                                body: `Welcome back! You've logged in successfully.`,
+                                icon: '/favicon.ico'
+                            });
+                        } else if (Notification.permission !== 'denied') {
+                            Notification.requestPermission().then(permission => {
+                                if (permission === 'granted') {
+                                    new Notification('Login Successful', {
+                                        body: `Welcome back! You've logged in successfully.`,
+                                        icon: '/favicon.ico'
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Notification error:', error);
+                // Don't show error to user, just log it
+            }
+        }
+    });
+</script>
+</body>
+</html>
