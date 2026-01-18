@@ -639,7 +639,7 @@ app.post('/register-fcm-token', async function(req, res) {
 
 
   app.get('/login', function(req, res) {
-    const loginPath = path.join(__dirname, 'login.html');
+    const loginPath = path.join(__dirname, 'public', 'login.html');
     res.sendFile(loginPath);
   });
 
@@ -719,7 +719,7 @@ app.post('/register-fcm-token', async function(req, res) {
           }
         },
         
-        // iOS config (if you support iOS later)
+       
         apns: {
           headers: {
             'apns-priority': '10',

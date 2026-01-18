@@ -868,7 +868,7 @@
                 </div>
 
                 <div class="login-link">
-                    Already have an account? <a href="login.html">Sign in</a>
+                    Already have an account? <a href="https://lockin-production.up.railway.app/login">Sign in</a>
                 </div>
             </form>
         </div>
@@ -996,10 +996,10 @@ function playRingtone() {
     
     isRingtonePlaying = true;
     
-    // Try to play audio file first
-    ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    // Try to play audio file first - Classic phone ringtone (similar to Android default)
+    ringtoneAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869.wav');
     ringtoneAudio.loop = true;
-    ringtoneAudio.volume = 0.8;
+    ringtoneAudio.volume = 1.0;
     
     ringtoneAudio.play().then(() => {
         console.log('✅ Ringtone playing from audio file');
