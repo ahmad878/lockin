@@ -1241,7 +1241,7 @@ app.post('/register-fcm-token', async function(req, res) {
         // Send incoming call ONLY to the recipient
         io.to(recipientSocketId).emit("incoming-call", {
           fromUserId: fromUserId,
-          callerName: callerName,
+          fromName: callerName,
           callId: `${fromUserId}-${Date.now()}`,
           timestamp: new Date().toISOString()
         });
@@ -1258,7 +1258,7 @@ app.post('/register-fcm-token', async function(req, res) {
 
     // ===== Accept Call Handler =====
     socket.on("accept-call", (callData) => {
-      const { fromUserId, acceptedByUserId } = callData;
+      const { fromUserId, acceptedByUserId, acceptedByName } = callData;
       const callerSocketId = userSocketMap.get(fromUserId);
 
       console.log(`✅ Call accepted: ${acceptedByUserId} accepted call from ${fromUserId}`);
@@ -1266,7 +1266,8 @@ app.post('/register-fcm-token', async function(req, res) {
       if (callerSocketId) {
         // Notify caller that call was accepted
         io.to(callerSocketId).emit("call-accepted", {
-          acceptedBy: acceptedByUserId,
+          acceptedByUserId: acceptedByUserId,
+          acceptedByName: acceptedByName,
           timestamp: new Date().toISOString()
         });
         console.log(`📢 Call accepted notification sent to ${fromUserId}`);

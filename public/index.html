@@ -759,7 +759,11 @@ function showIncomingCallUI(callData, socket) {
             }
         }
         
-        socket.emit('accept-call', { fromUserId: callData.fromUserId, acceptedByUserId: currentUserId });
+        socket.emit('accept-call', { 
+            fromUserId: callData.fromUserId, 
+            acceptedByUserId: currentUserId,
+            acceptedByName: currentUserName || 'Unknown'
+        });
         incomingCallOverlay.remove();
         showToast('Call accepted!', 'success');
         // Start WebRTC as the receiver - pass caller name
@@ -1515,6 +1519,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Store the contact we're calling
                     window.currentCallRecipient = contact.contactUserId;
                     window.currentCallContactName = contact.customName;
+                    
+                    // Also emit call-user via socket for real-time connection
+                    if (socket && socket.connected) {
+                        socket.emit('call-user', {
+                            fromUserId: currentUserId,
+                            toUserId: contact.contactUserId,
+                            callerName: currentUserName || 'Someone'
+                        });
+                        console.log('📞 Emitted call-user to:', contact.contactUserId);
+                    }
                 } else {
                     showToast(result.message || 'Failed to call', 'error');
                 }
@@ -1581,9 +1595,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
-        // Start WebRTC connection when call is accepted - get name from stored contact
-        const contactName = window.currentCallContactName || 'Unknown';
-        startWebRTCCall(data.acceptedByUserId, true, contactName);
+        // Start WebRTC connection when call is accepted
+        // Use the stored recipient ID since we initiated the call
+        const recipientId = window.currentCallRecipient || data.acceptedByUserId;
+        const contactName = window.currentCallContactName || data.acceptedByName || 'Unknown';
+        console.log('📞 Starting WebRTC as caller to:', recipientId);
+        startWebRTCCall(recipientId, true, contactName);
     });
 
     socket.on('call-rejected', function(data) {
