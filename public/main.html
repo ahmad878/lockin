@@ -582,26 +582,7 @@ async function setupPushNotifications() {
             
             const data = notification.notification.data;
             if (data && data.type === 'incoming-call') {
-                console.log('📞 Showing incoming call UI from notification tap');
-                // Wait a moment for socket to connect if needed
-                setTimeout(() => {
-                    if (socket && socket.connected) {
-                        const callData = {
-                            fromUserId: data.fromUserId,
-                            fromName: data.callerName || data.fromName || 'Unknown',
-                            callerName: data.callerName || data.fromName || 'Unknown'
-                        };
-                        playRingtone();
-                        showIncomingCallUI(callData, socket);
-                    } else {
-                        // Socket not ready, store for later
-                        window.pendingCallFromNotification = {
-                            fromUserId: data.fromUserId,
-                            fromName: data.callerName || data.fromName || 'Unknown',
-                            callerName: data.callerName || data.fromName || 'Unknown'
-                        };
-                    }
-                }, 500);
+                showToast(`Call from ${data.callerName}`, 'info');
             }
         });
         
@@ -805,14 +786,7 @@ function showIncomingCallUI(callData, socket) {
         });
         
         incomingCallOverlay.remove();
-        
-        // Redirect to index.html with call info to start WebRTC
-        const params = new URLSearchParams({
-            acceptCall: 'true',
-            fromUserId: callData.fromUserId,
-            callerName: callData.fromName || callData.callerName || 'Unknown'
-        });
-        window.location.href = `/index.html?${params.toString()}`;
+        showToast('Call accepted!', 'success');
     });
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {
@@ -904,24 +878,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         socket.emit('register-user', currentUserId);
         console.log('✅ User registered with socket:', currentUserId);
         
-        // Check if there's a pending call from notification tap
-        if (window.pendingCallFromNotification) {
-            console.log('📞 Processing pending call from notification');
-            playRingtone();
-            showIncomingCallUI(window.pendingCallFromNotification, socket);
-            window.pendingCallFromNotification = null;
+        // Check if there's accepted call data from Android IncomingCallActivity
+        if (window.acceptedCallData) {
+            console.log('📞 Found pending accepted call data:', window.acceptedCallData);
+            handleAcceptedCall(window.acceptedCallData);
+            window.acceptedCallData = null;
         }
     });
 
+    // Handle accepted call from Android native IncomingCallActivity
+    // Since main.html doesn't have full WebRTC, redirect to index.html with call data
+    window.handleAcceptedCall = function(callData) {
+        console.log('📲 Handling accepted call from Android (main.html):', callData);
+        
+        if (!callData || !callData.callerId) {
+            console.error('❌ Invalid call data:', callData);
+            return;
+        }
+        
+        // Store call data and redirect to index.html which has full WebRTC support
+        sessionStorage.setItem('pendingAcceptedCall', JSON.stringify(callData));
+        window.location.href = '/index.html';
+    };
+
     socket.on('incoming-call', async function(callData) {
         console.log('📞 Incoming call from:', callData);
-        // Only show UI if no incoming call overlay already exists (from notification)
-        if (!document.getElementById('incomingCallOverlay')) {
-            playRingtone();
-            showIncomingCallUI(callData, socket);
-        } else {
-            console.log('📞 Incoming call UI already showing from notification');
-        }
+        playRingtone();
+        showIncomingCallUI(callData, socket);
     });
 
     socket.on('call-accepted', function(data) {
