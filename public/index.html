@@ -833,46 +833,17 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
         // Show in-call UI immediately
         showInCallUI(remoteUserName);
 
-        // Request microphone with specific constraints for better quality
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: false, // Disable auto gain so we can control it
-                channelCount: 1,
-                sampleRate: 48000
-            }, 
-            video: false 
-        });
+        // Request microphone permission
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         console.log('✅ Microphone access granted');
-
-        // BOOST MICROPHONE INPUT using Web Audio API
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            await audioContext.resume();
-            
-            const source = audioContext.createMediaStreamSource(localStream);
-            const gainNode = audioContext.createGain();
-            gainNode.gain.value = 5.0; // Boost mic input 5x
-            
-            const destination = audioContext.createMediaStreamDestination();
-            source.connect(gainNode);
-            gainNode.connect(destination);
-            
-            // Use the boosted stream instead of original
-            localStream = destination.stream;
-            console.log('🔊 Microphone boosted with gain: 5.0');
-        } catch (err) {
-            console.error('⚠️ Could not boost microphone:', err);
-        }
 
         // Create peer connection
         peerConnection = new RTCPeerConnection(configuration);
 
-        // Add local audio track (now boosted)
+        // Add local audio track
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
-            console.log('📤 Added boosted local audio track');
+            console.log('📤 Added local audio track');
         });
 
         // Handle ICE candidates
@@ -896,61 +867,19 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
         peerConnection.ontrack = (event) => {
             console.log('📥 Received remote audio stream!');
             
-            const stream = event.streams[0];
-            
-            // Create audio context for boosting
-            try {
-                if (!window.callAudioContext) {
-                    window.callAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                const audioContext = window.callAudioContext;
-                
-                // Resume audio context (required on mobile)
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                
-                // Create gain node with HIGH boost
-                const source = audioContext.createMediaStreamSource(stream);
-                const gainNode = audioContext.createGain();
-                gainNode.gain.value = 10.0; // 10x volume boost!
-                
-                // Connect: source -> gain -> speakers
-                source.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                window.callGainNode = gainNode; // Store for speaker button
-                console.log('🔊 Audio boosted with gain: 10.0');
-            } catch (err) {
-                console.error('⚠️ Web Audio API error:', err);
-            }
-            
-            // Also create audio element (for devices where Web Audio doesn't work)
+            // Create and store audio element
             if (!remoteAudioElement) {
                 remoteAudioElement = document.createElement('audio');
                 remoteAudioElement.id = 'remoteAudio';
                 remoteAudioElement.autoplay = true;
                 remoteAudioElement.playsInline = true;
-                remoteAudioElement.setAttribute('playsinline', '');
-                remoteAudioElement.setAttribute('webkit-playsinline', '');
                 document.body.appendChild(remoteAudioElement);
             }
             
-            remoteAudioElement.srcObject = stream;
-            remoteAudioElement.volume = 1.0;
-            remoteAudioElement.muted = false;
-            
-            // Force play
-            const playAudio = () => {
-                remoteAudioElement.play()
-                    .then(() => console.log('✅ Remote audio element playing'))
-                    .catch(err => console.error('Audio play error:', err));
-            };
-            
-            playAudio();
-            // Retry on user interaction
-            document.addEventListener('touchstart', playAudio, { once: true });
-            document.addEventListener('click', playAudio, { once: true });
+            remoteAudioElement.srcObject = event.streams[0];
+            remoteAudioElement.play()
+                .then(() => console.log('✅ Remote audio playing'))
+                .catch(err => console.error('Error playing remote audio:', err));
         };
 
         // Handle connection state
