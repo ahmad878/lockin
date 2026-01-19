@@ -582,7 +582,14 @@ async function setupPushNotifications() {
             
             const data = notification.notification.data;
             if (data && data.type === 'incoming-call') {
-                showToast(`Call from ${data.callerName}`, 'info');
+                console.log('📞 User tapped call notification, storing call data');
+                // Store the call data to be processed once socket connects
+                window.pendingIncomingCall = {
+                    fromUserId: data.fromUserId,
+                    callerName: data.callerName || data.fromName || 'Unknown',
+                    fromName: data.callerName || data.fromName || 'Unknown'
+                };
+                showToast(`Connecting call from ${data.callerName}...`, 'info');
             }
         });
         
@@ -877,12 +884,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         socket.emit('register-user', currentUserId);
         console.log('✅ User registered with socket:', currentUserId);
+        
+        // If there's a pending incoming call from notification tap, show it now
+        if (window.pendingIncomingCall) {
+            console.log('📞 Processing pending incoming call from notification tap');
+            const callData = window.pendingIncomingCall;
+            window.pendingIncomingCall = null; // Clear it
+            playRingtone();
+            showIncomingCallUI(callData, socket);
+        }
     });
 
     socket.on('incoming-call', async function(callData) {
         console.log('📞 Incoming call from:', callData);
-        playRingtone();
-        showIncomingCallUI(callData, socket);
+        // Only show UI if no incoming call overlay already exists (from notification)
+        if (!document.getElementById('incomingCallOverlay')) {
+            playRingtone();
+            showIncomingCallUI(callData, socket);
+        } else {
+            console.log('📞 Incoming call UI already showing from notification');
+        }
     });
 
     socket.on('call-accepted', function(data) {
