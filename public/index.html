@@ -1166,7 +1166,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     socket.on('incoming-call', async function(callData) {
         console.log('📞 Incoming call from:', callData);
-        showIncomingCallUI(callData, socket);
+        // Only show UI if no incoming call overlay already exists (from notification)
+        if (!document.getElementById('incomingCallOverlay')) {
+            showIncomingCallUI(callData, socket);
+        } else {
+            console.log('📞 Incoming call UI already showing from notification');
+        }
     });
 
     socket.on('call-accepted', function(data) {
