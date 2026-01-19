@@ -762,8 +762,8 @@ function showIncomingCallUI(callData, socket) {
         socket.emit('accept-call', { fromUserId: callData.fromUserId, acceptedByUserId: currentUserId });
         incomingCallOverlay.remove();
         showToast('Call accepted!', 'success');
-        // Start WebRTC as the receiver
-        startWebRTCCall(callData.fromUserId, false); // false = we are the receiver
+        // Start WebRTC as the receiver - pass caller name
+        startWebRTCCall(callData.fromUserId, false, callData.fromName || 'Unknown');
     });
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {
@@ -804,23 +804,30 @@ function hideCallStatus() {
 let peerConnection = null;
 let localStream = null;
 let remoteUserId = null;
+let remoteUserName = null;
 let isCaller = false;
 let callUIShown = false;
 let socket = null; // Will be initialized after DOM loads
+let remoteAudioElement = null;
 
 const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
     ]
 };
 
-async function startWebRTCCall(targetUserId, isInitiator) {
+async function startWebRTCCall(targetUserId, isInitiator, contactName) {
     try {
         console.log('🎙️ Starting WebRTC call with:', targetUserId, 'as', isInitiator ? 'caller' : 'receiver');
         
         remoteUserId = targetUserId;
+        remoteUserName = contactName || 'Unknown';
         isCaller = isInitiator;
+
+        // Show in-call UI immediately
+        showInCallUI(remoteUserName);
 
         // Request microphone permission
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -838,7 +845,7 @@ async function startWebRTCCall(targetUserId, isInitiator) {
         // Handle ICE candidates
         peerConnection.onicecandidate = (event) => {
             if (event.candidate && socket) {
-                console.log('🧊 Sending ICE candidate');
+                console.log('🧊 Sending ICE candidate to:', remoteUserId);
                 socket.emit('webrtc-ice-candidate', {
                     toUserId: remoteUserId,
                     candidate: event.candidate,
@@ -847,32 +854,55 @@ async function startWebRTCCall(targetUserId, isInitiator) {
             }
         };
 
+        // Handle ICE connection state
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('🧊 ICE connection state:', peerConnection.iceConnectionState);
+        };
+
         // Handle remote stream
         peerConnection.ontrack = (event) => {
-            console.log('📥 Received remote audio stream');
-            const remoteAudio = new Audio();
-            remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(err => console.error('Error playing remote audio:', err));
+            console.log('📥 Received remote audio stream!');
+            
+            // Create and store audio element globally
+            if (!remoteAudioElement) {
+                remoteAudioElement = document.createElement('audio');
+                remoteAudioElement.id = 'remoteAudio';
+                remoteAudioElement.autoplay = true;
+                remoteAudioElement.playsInline = true;
+                document.body.appendChild(remoteAudioElement);
+            }
+            
+            remoteAudioElement.srcObject = event.streams[0];
+            remoteAudioElement.play()
+                .then(() => console.log('✅ Remote audio playing'))
+                .catch(err => {
+                    console.error('Error playing remote audio:', err);
+                    // Try to play on user interaction
+                    document.addEventListener('click', () => {
+                        remoteAudioElement.play().catch(e => console.error('Still cannot play:', e));
+                    }, { once: true });
+                });
         };
 
         // Handle connection state
         peerConnection.onconnectionstatechange = () => {
             console.log('🔌 Connection state:', peerConnection.connectionState);
-            if (peerConnection.connectionState === 'connected') {
-                hideCallStatus();
-                showInCallUI();
-            } else if (peerConnection.connectionState === 'disconnected' || 
-                       peerConnection.connectionState === 'failed') {
+            updateCallStatus(peerConnection.connectionState);
+            
+            if (peerConnection.connectionState === 'disconnected' || 
+                peerConnection.connectionState === 'failed' ||
+                peerConnection.connectionState === 'closed') {
                 endWebRTCCall();
             }
         };
 
         // If we are the caller, create and send offer
         if (isCaller && socket) {
+            console.log('📡 Creating WebRTC offer...');
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             
-            console.log('📡 Sending WebRTC offer');
+            console.log('📡 Sending WebRTC offer to:', remoteUserId);
             socket.emit('webrtc-offer', {
                 toUserId: remoteUserId,
                 offer: offer,
@@ -884,6 +914,29 @@ async function startWebRTCCall(targetUserId, isInitiator) {
         console.error('❌ WebRTC error:', error);
         showToast('Failed to start call: ' + error.message, 'error');
         endWebRTCCall();
+    }
+}
+
+function updateCallStatus(state) {
+    const statusEl = document.getElementById('callConnectionStatus');
+    if (statusEl) {
+        switch(state) {
+            case 'connecting':
+                statusEl.textContent = 'Connecting...';
+                break;
+            case 'connected':
+                statusEl.textContent = 'Connected';
+                statusEl.style.color = '#25d366';
+                break;
+            case 'disconnected':
+                statusEl.textContent = 'Disconnected';
+                break;
+            case 'failed':
+                statusEl.textContent = 'Connection failed';
+                break;
+            default:
+                statusEl.textContent = state;
+        }
     }
 }
 
@@ -935,9 +988,12 @@ async function handleICECandidate(candidate) {
     }
 }
 
-function showInCallUI() {
+function showInCallUI(contactName) {
     if (callUIShown) return;
     callUIShown = true;
+
+    // Hide call status if showing
+    hideCallStatus();
 
     const callUI = document.createElement('div');
     callUI.id = 'inCallUI';
@@ -953,53 +1009,80 @@ function showInCallUI() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 30px;
+        gap: 20px;
     `;
 
+    const displayName = contactName || remoteUserName || 'Unknown';
+    const initial = displayName.charAt(0).toUpperCase();
+
     callUI.innerHTML = `
+        <div style="
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00a884, #25d366);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 600;
+            color: white;
+        ">${initial}</div>
         <div style="color: #e9edef; font-size: 24px; font-weight: 600;">
-            Call Connected
+            ${displayName}
         </div>
-        <div style="color: #8696a0; font-size: 16px;" id="callTimer">
+        <div style="color: #8696a0; font-size: 14px;" id="callConnectionStatus">
+            Connecting...
+        </div>
+        <div style="color: #e9edef; font-size: 20px;" id="callTimer">
             00:00
         </div>
-        <div style="display: flex; gap: 20px;">
-            <button id="muteBtn" style="
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: #202c33;
-                border: none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-            ">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button id="speakerBtn" style="
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: #202c33;
-                border: none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-            ">
-                <i class="fas fa-volume-up"></i>
-            </button>
-            <button id="endCallBtn" style="
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: #f44336;
-                border: none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-            ">
-                <i class="fas fa-phone-slash"></i>
-            </button>
+        <div style="display: flex; gap: 30px; margin-top: 40px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="muteBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
+                    color: white;
+                    font-size: 22px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <span style="color: #8696a0; font-size: 12px;">Mute</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="speakerBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
+                    color: white;
+                    font-size: 22px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <span style="color: #8696a0; font-size: 12px;">Speaker</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="endCallBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #f44336;
+                    border: none;
+                    color: white;
+                    font-size: 22px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <span style="color: #8696a0; font-size: 12px;">End</span>
+            </div>
         </div>
     `;
 
@@ -1056,6 +1139,14 @@ function endWebRTCCall() {
         localStream = null;
     }
 
+    // Stop and remove remote audio
+    if (remoteAudioElement) {
+        remoteAudioElement.pause();
+        remoteAudioElement.srcObject = null;
+        remoteAudioElement.remove();
+        remoteAudioElement = null;
+    }
+
     // Close peer connection
     if (peerConnection) {
         peerConnection.close();
@@ -1074,7 +1165,10 @@ function endWebRTCCall() {
 
     callUIShown = false;
     remoteUserId = null;
+    remoteUserName = null;
     isCaller = false;
+    window.currentCallRecipient = null;
+    window.currentCallContactName = null;
 
     hideCallStatus();
 }
@@ -1420,6 +1514,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showCallStatus('Calling...');
                     // Store the contact we're calling
                     window.currentCallRecipient = contact.contactUserId;
+                    window.currentCallContactName = contact.customName;
                 } else {
                     showToast(result.message || 'Failed to call', 'error');
                 }
@@ -1486,8 +1581,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
-        // Start WebRTC connection when call is accepted
-        startWebRTCCall(data.acceptedByUserId, true); // true = we are the caller
+        // Start WebRTC connection when call is accepted - get name from stored contact
+        const contactName = window.currentCallContactName || 'Unknown';
+        startWebRTCCall(data.acceptedByUserId, true, contactName);
     });
 
     socket.on('call-rejected', function(data) {
