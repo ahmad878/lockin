@@ -674,25 +674,7 @@ async function setupPushNotifications() {
             console.log('📲 Notification tapped:', notification);
             const data = notification.notification.data;
             if (data && data.type === 'incoming-call') {
-                console.log('📞 Showing incoming call UI from notification tap');
-                // Wait a moment for socket to connect if needed
-                setTimeout(() => {
-                    if (socket && socket.connected) {
-                        const callData = {
-                            fromUserId: data.fromUserId,
-                            fromName: data.callerName || data.fromName || 'Unknown',
-                            callerName: data.callerName || data.fromName || 'Unknown'
-                        };
-                        showIncomingCallUI(callData, socket);
-                    } else {
-                        // Socket not ready, store for later
-                        window.pendingCallFromNotification = {
-                            fromUserId: data.fromUserId,
-                            fromName: data.callerName || data.fromName || 'Unknown',
-                            callerName: data.callerName || data.fromName || 'Unknown'
-                        };
-                    }
-                }, 500);
+                showToast(`Call from ${data.callerName}`, 'info');
             }
         });
         
@@ -1611,30 +1593,65 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentUserId) {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
-            
-            // Check if redirected from main.html after accepting call
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('acceptCall') === 'true') {
-                const fromUserId = urlParams.get('fromUserId');
-                const callerName = urlParams.get('callerName') || 'Unknown';
-                console.log('📞 Redirected from main.html, starting WebRTC call');
-                
-                // Clear URL params
-                window.history.replaceState({}, document.title, window.location.pathname);
-                
-                // Start the call as receiver
-                showToast('Connecting to call...', 'success');
-                startWebRTCCall(fromUserId, false, callerName);
-            }
-            
-            // Check if there's a pending call from notification tap
-            if (window.pendingCallFromNotification) {
-                console.log('📞 Processing pending call from notification');
-                showIncomingCallUI(window.pendingCallFromNotification, socket);
-                window.pendingCallFromNotification = null;
+        }
+        
+        // Check if there's accepted call data from Android IncomingCallActivity
+        if (window.acceptedCallData) {
+            console.log('📞 Found pending accepted call data from Android:', window.acceptedCallData);
+            handleAcceptedCall(window.acceptedCallData);
+            window.acceptedCallData = null;
+        }
+        
+        // Check if there's pending call data from sessionStorage (redirect from main.html)
+        const pendingCall = sessionStorage.getItem('pendingAcceptedCall');
+        if (pendingCall) {
+            console.log('📞 Found pending accepted call in sessionStorage:', pendingCall);
+            sessionStorage.removeItem('pendingAcceptedCall');
+            try {
+                const callData = JSON.parse(pendingCall);
+                handleAcceptedCall(callData);
+            } catch (e) {
+                console.error('Error parsing pending call data:', e);
             }
         }
     });
+
+    // Handle accepted call from Android native IncomingCallActivity
+    window.handleAcceptedCall = function(callData) {
+        console.log('📲 Handling accepted call from Android:', callData);
+        
+        if (!callData || !callData.callerId) {
+            console.error('❌ Invalid call data:', callData);
+            return;
+        }
+        
+        // Make sure socket is connected
+        if (!socket || !socket.connected) {
+            console.log('⏳ Socket not ready, waiting...');
+            setTimeout(() => window.handleAcceptedCall(callData), 500);
+            return;
+        }
+        
+        // Make sure user is registered
+        if (!currentUserId) {
+            console.log('⏳ User not ready, waiting...');
+            setTimeout(() => window.handleAcceptedCall(callData), 500);
+            return;
+        }
+        
+        // Emit accept-call to server to notify the caller
+        socket.emit('accept-call', {
+            fromUserId: callData.callerId,
+            acceptedByUserId: currentUserId,
+            acceptedByName: currentUserName || 'Unknown'
+        });
+        
+        showToast('Call accepted!', 'success');
+        
+        // Start WebRTC as the receiver
+        console.log('🎙️ Starting WebRTC call as receiver with:', callData.callerId);
+        startWebRTCCall(callData.callerId, false, callData.callerName || 'Unknown');
+    };
 
     socket.on('incoming-call', async function(callData) {
         console.log('📞 Incoming call from:', callData);
