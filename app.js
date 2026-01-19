@@ -163,6 +163,25 @@ console.log('✅ Firebase Admin initialized');
       type: String,
       default: null
     },
+    contacts: [{
+      contactUserId: {
+        type: String,
+        required: true
+      },
+      contactEmail: {
+        type: String,
+        required: true
+      },
+      customName: {
+        type: String,
+        required: true,
+        trim: true
+      },
+      addedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
     createdAt: {
       type: Date,
       default: Date.now
@@ -670,6 +689,258 @@ app.post('/register-fcm-token', async function(req, res) {
     res.sendFile(loginPath);
   });
 
+  // ===== CONTACTS MANAGEMENT =====
+  
+  // Get all contacts for current user
+  app.get('/contacts', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        contacts: user.contacts || []
+      });
+
+    } catch (error) {
+      console.error('Get contacts error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // Add a new contact
+  app.post('/contacts/add', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const { contactEmail, customName } = req.body;
+
+      if (!contactEmail || !customName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Contact email and custom name are required'
+        });
+      }
+
+      const cleanEmail = contactEmail.trim().toLowerCase();
+      const cleanName = customName.trim();
+
+      // Can't add yourself
+      if (cleanEmail === decoded.email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot add yourself as a contact'
+        });
+      }
+
+      // Check if contact user exists
+      const contactUser = await User.findOne({ email: cleanEmail });
+      if (!contactUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User with this email does not exist'
+        });
+      }
+
+      // Check if already in contacts
+      const user = await User.findById(decoded.id);
+      const existingContact = user.contacts.find(c => c.contactEmail === cleanEmail);
+      
+      if (existingContact) {
+        return res.status(400).json({
+          success: false,
+          message: 'Contact already exists'
+        });
+      }
+
+      // Add contact
+      const newContact = {
+        contactUserId: contactUser._id.toString(),
+        contactEmail: cleanEmail,
+        customName: cleanName,
+        addedAt: new Date()
+      };
+
+      user.contacts.push(newContact);
+      await user.save();
+
+      console.log(`✅ Contact added: ${cleanName} (${cleanEmail}) for user ${decoded.id}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Contact added successfully',
+        contact: newContact
+      });
+
+    } catch (error) {
+      console.error('Add contact error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // Delete a contact
+  app.delete('/contacts/:contactEmail', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const contactEmail = req.params.contactEmail.trim().toLowerCase();
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      const initialLength = user.contacts.length;
+      user.contacts = user.contacts.filter(c => c.contactEmail !== contactEmail);
+
+      if (user.contacts.length === initialLength) {
+        return res.status(404).json({
+          success: false,
+          message: 'Contact not found'
+        });
+      }
+
+      await user.save();
+
+      console.log(`✅ Contact deleted: ${contactEmail} for user ${decoded.id}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Contact deleted successfully'
+      });
+
+    } catch (error) {
+      console.error('Delete contact error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // Update contact name
+  app.put('/contacts/:contactEmail', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const contactEmail = req.params.contactEmail.trim().toLowerCase();
+      const { customName } = req.body;
+
+      if (!customName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Custom name is required'
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      const contact = user.contacts.find(c => c.contactEmail === contactEmail);
+      if (!contact) {
+        return res.status(404).json({
+          success: false,
+          message: 'Contact not found'
+        });
+      }
+
+      contact.customName = customName.trim();
+      await user.save();
+
+      console.log(`✅ Contact updated: ${contactEmail} renamed to ${customName} for user ${decoded.id}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Contact updated successfully',
+        contact: contact
+      });
+
+    } catch (error) {
+      console.error('Update contact error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
  app.post('/send-message-notification', async function(req, res) {
   try {
     const { toEmail, fromUserId, fromName } = req.body;
@@ -684,6 +955,23 @@ app.post('/register-fcm-token', async function(req, res) {
 
     // Clean email
     const correctedEmail = toEmail.trim().toLowerCase();
+
+    // Check if the caller has this person in their contacts
+    const caller = await User.findById(fromUserId);
+    if (!caller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Caller not found'
+      });
+    }
+
+    const hasContact = caller.contacts.some(c => c.contactEmail === correctedEmail);
+    if (!hasContact) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must add this person as a contact before calling'
+      });
+    }
 
     const targetUser = await User.findOne({ email: correctedEmail });
 
