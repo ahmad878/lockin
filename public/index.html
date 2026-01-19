@@ -867,41 +867,61 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
         peerConnection.ontrack = (event) => {
             console.log('📥 Received remote audio stream!');
             
-            // Create and store audio element globally
+            const stream = event.streams[0];
+            
+            // Create audio context for boosting
+            try {
+                if (!window.callAudioContext) {
+                    window.callAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const audioContext = window.callAudioContext;
+                
+                // Resume audio context (required on mobile)
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                // Create gain node with HIGH boost
+                const source = audioContext.createMediaStreamSource(stream);
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 10.0; // 10x volume boost!
+                
+                // Connect: source -> gain -> speakers
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                window.callGainNode = gainNode; // Store for speaker button
+                console.log('🔊 Audio boosted with gain: 10.0');
+            } catch (err) {
+                console.error('⚠️ Web Audio API error:', err);
+            }
+            
+            // Also create audio element (for devices where Web Audio doesn't work)
             if (!remoteAudioElement) {
                 remoteAudioElement = document.createElement('audio');
                 remoteAudioElement.id = 'remoteAudio';
                 remoteAudioElement.autoplay = true;
                 remoteAudioElement.playsInline = true;
-                remoteAudioElement.volume = 1.0; // Max volume
+                remoteAudioElement.setAttribute('playsinline', '');
+                remoteAudioElement.setAttribute('webkit-playsinline', '');
                 document.body.appendChild(remoteAudioElement);
             }
             
-            // Use Web Audio API to boost volume
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(event.streams[0]);
-                const gainNode = audioContext.createGain();
-                gainNode.gain.value = 3.0; // Boost volume 3x
-                source.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                console.log('🔊 Audio boosted with gain: 3.0');
-            } catch (err) {
-                console.log('⚠️ Could not boost audio, using default:', err);
-            }
-            
-            // Also play through audio element as backup
-            remoteAudioElement.srcObject = event.streams[0];
+            remoteAudioElement.srcObject = stream;
             remoteAudioElement.volume = 1.0;
-            remoteAudioElement.play()
-                .then(() => console.log('✅ Remote audio playing'))
-                .catch(err => {
-                    console.error('Error playing remote audio:', err);
-                    // Try to play on user interaction
-                    document.addEventListener('click', () => {
-                        remoteAudioElement.play().catch(e => console.error('Still cannot play:', e));
-                    }, { once: true });
-                });
+            remoteAudioElement.muted = false;
+            
+            // Force play
+            const playAudio = () => {
+                remoteAudioElement.play()
+                    .then(() => console.log('✅ Remote audio element playing'))
+                    .catch(err => console.error('Audio play error:', err));
+            };
+            
+            playAudio();
+            // Retry on user interaction
+            document.addEventListener('touchstart', playAudio, { once: true });
+            document.addEventListener('click', playAudio, { once: true });
         };
 
         // Handle connection state
