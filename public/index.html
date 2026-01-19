@@ -674,7 +674,25 @@ async function setupPushNotifications() {
             console.log('📲 Notification tapped:', notification);
             const data = notification.notification.data;
             if (data && data.type === 'incoming-call') {
-                showToast(`Call from ${data.callerName}`, 'info');
+                console.log('📞 Showing incoming call UI from notification tap');
+                // Wait a moment for socket to connect if needed
+                setTimeout(() => {
+                    if (socket && socket.connected) {
+                        const callData = {
+                            fromUserId: data.fromUserId,
+                            fromName: data.callerName || data.fromName || 'Unknown',
+                            callerName: data.callerName || data.fromName || 'Unknown'
+                        };
+                        showIncomingCallUI(callData, socket);
+                    } else {
+                        // Socket not ready, store for later
+                        window.pendingCallFromNotification = {
+                            fromUserId: data.fromUserId,
+                            fromName: data.callerName || data.fromName || 'Unknown',
+                            callerName: data.callerName || data.fromName || 'Unknown'
+                        };
+                    }
+                }, 500);
             }
         });
         
@@ -1593,6 +1611,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentUserId) {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
+            
+            // Check if redirected from main.html after accepting call
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('acceptCall') === 'true') {
+                const fromUserId = urlParams.get('fromUserId');
+                const callerName = urlParams.get('callerName') || 'Unknown';
+                console.log('📞 Redirected from main.html, starting WebRTC call');
+                
+                // Clear URL params
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                // Start the call as receiver
+                showToast('Connecting to call...', 'success');
+                startWebRTCCall(fromUserId, false, callerName);
+            }
+            
+            // Check if there's a pending call from notification tap
+            if (window.pendingCallFromNotification) {
+                console.log('📞 Processing pending call from notification');
+                showIncomingCallUI(window.pendingCallFromNotification, socket);
+                window.pendingCallFromNotification = null;
+            }
         }
     });
 
