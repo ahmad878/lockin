@@ -8,6 +8,7 @@
         // Check authentication FIRST - redirect to signup if not logged in
         window.userAuthenticated = false;
         window.userData = null;
+        window.authCheckComplete = false;
         
         (async function() {
             try {
@@ -27,11 +28,15 @@
                     // NOT logged in - redirect to signup
                     console.log('❌ Not authenticated, redirecting to signup...');
                     window.location.href = '/signup.html';
+                    return;
                 }
             } catch (error) {
-                console.error('Auth check error:', error);
-                window.location.href = '/signup.html';
+                // Network error - DON'T redirect, just log it
+                // User might be logged in but network is down
+                console.error('Auth check error (network issue?):', error);
+                console.log('⚠️ Network error - staying on page, will retry...');
             }
+            window.authCheckComplete = true;
         })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
