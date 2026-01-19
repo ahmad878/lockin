@@ -1511,8 +1511,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showToast('Calling ' + contact.customName + '...', 'success');
                     showCallStatus('Calling...');
                     // Store the contact we're calling
+                    console.log('📞 Contact object:', JSON.stringify(contact));
                     window.currentCallRecipient = contact.contactUserId;
                     window.currentCallContactName = contact.customName;
+                    console.log('📞 Stored currentCallRecipient:', window.currentCallRecipient);
                     
                     // Also emit call-user via socket for real-time connection
                     if (socket && socket.connected) {
@@ -1586,6 +1588,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     socket.on('call-accepted', function(data) {
         console.log('✅ Call accepted by:', data);
+        console.log('📞 window.currentCallRecipient:', window.currentCallRecipient);
+        console.log('📞 data.acceptedByUserId:', data.acceptedByUserId);
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
@@ -1593,7 +1597,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Use the stored recipient ID since we initiated the call
         const recipientId = window.currentCallRecipient || data.acceptedByUserId;
         const contactName = window.currentCallContactName || data.acceptedByName || 'Unknown';
-        console.log('📞 Starting WebRTC as caller to:', recipientId);
+        console.log('📞 Starting WebRTC as caller to recipientId:', recipientId);
+        if (!recipientId) {
+            console.error('❌ ERROR: No recipient ID for WebRTC call!');
+            showToast('Call failed - no recipient', 'error');
+            return;
+        }
         startWebRTCCall(recipientId, true, contactName);
     });
 
