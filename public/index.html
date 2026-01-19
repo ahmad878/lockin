@@ -762,6 +762,8 @@ function showIncomingCallUI(callData, socket) {
         socket.emit('accept-call', { fromUserId: callData.fromUserId, acceptedByUserId: currentUserId });
         incomingCallOverlay.remove();
         showToast('Call accepted!', 'success');
+        // Start WebRTC as the receiver
+        startWebRTCCall(callData.fromUserId, false); // false = we are the receiver
     });
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {
@@ -1137,6 +1139,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (response.ok) {
                     showToast('Calling ' + contact.customName + '...', 'success');
                     showCallStatus('Calling...');
+                    // Store the contact we're calling
+                    window.currentCallRecipient = contact.contactUserId;
                 } else {
                     showToast(result.message || 'Failed to call', 'error');
                 }
@@ -1172,6 +1176,277 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
+    // ==================== WEBRTC VOICE CALLING ====================
+    let peerConnection = null;
+    let localStream = null;
+    let remoteUserId = null;
+    let isCaller = false;
+    let callUIShown = false;
+
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    async function startWebRTCCall(targetUserId, isInitiator) {
+        try {
+            console.log('🎙️ Starting WebRTC call with:', targetUserId, 'as', isInitiator ? 'caller' : 'receiver');
+            
+            remoteUserId = targetUserId;
+            isCaller = isInitiator;
+
+            // Request microphone permission
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            console.log('✅ Microphone access granted');
+
+            // Create peer connection
+            peerConnection = new RTCPeerConnection(configuration);
+
+            // Add local audio track
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+                console.log('📤 Added local audio track');
+            });
+
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('🧊 Sending ICE candidate');
+                    socket.emit('webrtc-ice-candidate', {
+                        toUserId: remoteUserId,
+                        candidate: event.candidate,
+                        fromUserId: currentUserId
+                    });
+                }
+            };
+
+            // Handle remote stream
+            peerConnection.ontrack = (event) => {
+                console.log('📥 Received remote audio stream');
+                const remoteAudio = new Audio();
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.play().catch(err => console.error('Error playing remote audio:', err));
+            };
+
+            // Handle connection state
+            peerConnection.onconnectionstatechange = () => {
+                console.log('🔌 Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'connected') {
+                    hideCallStatus();
+                    showInCallUI();
+                } else if (peerConnection.connectionState === 'disconnected' || 
+                           peerConnection.connectionState === 'failed') {
+                    endWebRTCCall();
+                }
+            };
+
+            // If we are the caller, create and send offer
+            if (isCaller) {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                console.log('📡 Sending WebRTC offer');
+                socket.emit('webrtc-offer', {
+                    toUserId: remoteUserId,
+                    offer: offer,
+                    fromUserId: currentUserId
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ WebRTC error:', error);
+            showToast('Failed to start call: ' + error.message, 'error');
+            endWebRTCCall();
+        }
+    }
+
+    async function handleWebRTCOffer(offer, fromUserId) {
+        try {
+            if (!peerConnection) {
+                console.log('⚠️ No peer connection, call not accepted yet');
+                return;
+            }
+
+            console.log('📡 Setting remote offer');
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+            console.log('📡 Creating answer');
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            console.log('📡 Sending answer');
+            socket.emit('webrtc-answer', {
+                toUserId: fromUserId,
+                answer: answer,
+                fromUserId: currentUserId
+            });
+
+        } catch (error) {
+            console.error('❌ Error handling offer:', error);
+        }
+    }
+
+    async function handleWebRTCAnswer(answer) {
+        try {
+            console.log('📡 Setting remote answer');
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (error) {
+            console.error('❌ Error handling answer:', error);
+        }
+    }
+
+    async function handleICECandidate(candidate) {
+        try {
+            if (peerConnection) {
+                console.log('🧊 Adding ICE candidate');
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        } catch (error) {
+            console.error('❌ Error adding ICE candidate:', error);
+        }
+    }
+
+    function showInCallUI() {
+        if (callUIShown) return;
+        callUIShown = true;
+
+        const callUI = document.createElement('div');
+        callUI.id = 'inCallUI';
+        callUI.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0b141a;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        `;
+
+        callUI.innerHTML = `
+            <div style="color: #e9edef; font-size: 24px; font-weight: 600;">
+                Call Connected
+            </div>
+            <div style="color: #8696a0; font-size: 16px;" id="callTimer">
+                00:00
+            </div>
+            <div style="display: flex; gap: 20px;">
+                <button id="muteBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button id="speakerBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <button id="endCallBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #f44336;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                ">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(callUI);
+
+        // Call timer
+        let callSeconds = 0;
+        const timerInterval = setInterval(() => {
+            callSeconds++;
+            const minutes = Math.floor(callSeconds / 60);
+            const seconds = callSeconds % 60;
+            document.getElementById('callTimer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }, 1000);
+
+        // Mute button
+        let isMuted = false;
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            if (localStream) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+                document.getElementById('muteBtn').innerHTML = 
+                    `<i class="fas fa-microphone${isMuted ? '-slash' : ''}"></i>`;
+                showToast(isMuted ? 'Muted' : 'Unmuted', 'info');
+            }
+        });
+
+        // Speaker button (placeholder for mobile)
+        document.getElementById('speakerBtn').addEventListener('click', () => {
+            showToast('Speaker control', 'info');
+        });
+
+        // End call button
+        document.getElementById('endCallBtn').addEventListener('click', () => {
+            clearInterval(timerInterval);
+            socket.emit('end-call', { fromUserId: currentUserId, toUserId: remoteUserId });
+            endWebRTCCall();
+        });
+
+        // Store interval for cleanup
+        callUI.dataset.timerInterval = timerInterval;
+    }
+
+    function endWebRTCCall() {
+        console.log('🔴 Ending WebRTC call');
+
+        // Stop local stream
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+
+        // Close peer connection
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        // Remove call UI
+        const callUI = document.getElementById('inCallUI');
+        if (callUI) {
+            const timerInterval = callUI.dataset.timerInterval;
+            if (timerInterval) clearInterval(parseInt(timerInterval));
+            callUI.remove();
+        }
+
+        callUIShown = false;
+        remoteUserId = null;
+        isCaller = false;
+
+        hideCallStatus();
+        showToast('Call ended', 'info');
+    }
+
     // ==================== SOCKET.IO CONNECTION ====================
     const socket = io('https://lockin-production.up.railway.app', {
         reconnection: true,
@@ -1203,6 +1478,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
+        // Start WebRTC connection when call is accepted
+        startWebRTCCall(data.acceptedByUserId, true); // true = we are the caller
     });
 
     socket.on('call-rejected', function(data) {
@@ -1210,6 +1487,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast(`Call declined: ${data.reason || 'User busy'}`, 'error');
+    });
+
+    // ===== WebRTC Signaling Events =====
+    socket.on('webrtc-offer', async function(data) {
+        console.log('📡 Received WebRTC offer from:', data.fromUserId);
+        await handleWebRTCOffer(data.offer, data.fromUserId);
+    });
+
+    socket.on('webrtc-answer', async function(data) {
+        console.log('📡 Received WebRTC answer from:', data.fromUserId);
+        await handleWebRTCAnswer(data.answer);
+    });
+
+    socket.on('webrtc-ice-candidate', async function(data) {
+        console.log('🧊 Received ICE candidate from:', data.fromUserId);
+        await handleICECandidate(data.candidate);
+    });
+
+    socket.on('call-ended', function(data) {
+        console.log('🔴 Call ended by:', data.endedBy);
+        endWebRTCCall();
+        showToast('Call ended', 'info');
     });
 });
 </script>

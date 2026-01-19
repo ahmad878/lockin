@@ -1306,6 +1306,49 @@ app.post('/register-fcm-token', async function(req, res) {
       }
     });
 
+    // ===== WebRTC Signaling Handlers =====
+    socket.on("webrtc-offer", (data) => {
+      const { toUserId, offer, fromUserId } = data;
+      const recipientSocketId = userSocketMap.get(toUserId);
+      
+      console.log(`📡 WebRTC offer: ${fromUserId} -> ${toUserId}`);
+      
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("webrtc-offer", {
+          offer,
+          fromUserId
+        });
+      }
+    });
+
+    socket.on("webrtc-answer", (data) => {
+      const { toUserId, answer, fromUserId } = data;
+      const recipientSocketId = userSocketMap.get(toUserId);
+      
+      console.log(`📡 WebRTC answer: ${fromUserId} -> ${toUserId}`);
+      
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("webrtc-answer", {
+          answer,
+          fromUserId
+        });
+      }
+    });
+
+    socket.on("webrtc-ice-candidate", (data) => {
+      const { toUserId, candidate, fromUserId } = data;
+      const recipientSocketId = userSocketMap.get(toUserId);
+      
+      console.log(`🧊 ICE candidate: ${fromUserId} -> ${toUserId}`);
+      
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("webrtc-ice-candidate", {
+          candidate,
+          fromUserId
+        });
+      }
+    });
+
     // ===== Therapy Chat Handler =====
     socket.on("therapy-message", async (userMessage) => {
       try {
