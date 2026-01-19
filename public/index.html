@@ -674,14 +674,25 @@ async function setupPushNotifications() {
             console.log('📲 Notification tapped:', notification);
             const data = notification.notification.data;
             if (data && data.type === 'incoming-call') {
-                console.log('📞 User tapped call notification, storing call data');
-                // Store the call data to be processed once socket connects
-                window.pendingIncomingCall = {
-                    fromUserId: data.fromUserId,
-                    callerName: data.callerName || data.fromName || 'Unknown',
-                    fromName: data.callerName || data.fromName || 'Unknown'
-                };
-                showToast(`Connecting call from ${data.callerName}...`, 'info');
+                console.log('📞 Showing incoming call UI from notification tap');
+                // Wait a moment for socket to connect if needed
+                setTimeout(() => {
+                    if (socket && socket.connected) {
+                        const callData = {
+                            fromUserId: data.fromUserId,
+                            fromName: data.callerName || data.fromName || 'Unknown',
+                            callerName: data.callerName || data.fromName || 'Unknown'
+                        };
+                        showIncomingCallUI(callData, socket);
+                    } else {
+                        // Socket not ready, store for later
+                        window.pendingCallFromNotification = {
+                            fromUserId: data.fromUserId,
+                            fromName: data.callerName || data.fromName || 'Unknown',
+                            callerName: data.callerName || data.fromName || 'Unknown'
+                        };
+                    }
+                }, 500);
             }
         });
         
@@ -1601,29 +1612,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
             
-            // Check if redirected from main.html with call acceptance
+            // Check if redirected from main.html after accepting call
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('incomingCall') === 'true') {
-                console.log('📞 Redirected from main.html to handle accepted call');
+            if (urlParams.get('acceptCall') === 'true') {
                 const fromUserId = urlParams.get('fromUserId');
                 const callerName = urlParams.get('callerName') || 'Unknown';
+                console.log('📞 Redirected from main.html, starting WebRTC call');
                 
-                if (fromUserId) {
-                    // Clear URL parameters
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    
-                    // Start the WebRTC call immediately as receiver
-                    showToast('Connecting to call...', 'success');
-                    startWebRTCCall(fromUserId, false, callerName);
-                }
+                // Clear URL params
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                // Start the call as receiver
+                showToast('Connecting to call...', 'success');
+                startWebRTCCall(fromUserId, false, callerName);
             }
             
-            // If there's a pending incoming call from notification tap, show it now
-            if (window.pendingIncomingCall) {
-                console.log('📞 Processing pending incoming call from notification tap');
-                const callData = window.pendingIncomingCall;
-                window.pendingIncomingCall = null; // Clear it
-                showIncomingCallUI(callData, socket);
+            // Check if there's a pending call from notification tap
+            if (window.pendingCallFromNotification) {
+                console.log('📞 Processing pending call from notification');
+                showIncomingCallUI(window.pendingCallFromNotification, socket);
+                window.pendingCallFromNotification = null;
             }
         }
     });
