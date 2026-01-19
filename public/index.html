@@ -867,19 +867,41 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
         peerConnection.ontrack = (event) => {
             console.log('📥 Received remote audio stream!');
             
-            // Create and store audio element
+            // Create and store audio element globally
             if (!remoteAudioElement) {
                 remoteAudioElement = document.createElement('audio');
                 remoteAudioElement.id = 'remoteAudio';
                 remoteAudioElement.autoplay = true;
                 remoteAudioElement.playsInline = true;
+                remoteAudioElement.volume = 1.0; // Max volume
                 document.body.appendChild(remoteAudioElement);
             }
             
+            // Use Web Audio API to boost volume
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(event.streams[0]);
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 3.0; // Boost volume 3x
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                console.log('🔊 Audio boosted with gain: 3.0');
+            } catch (err) {
+                console.log('⚠️ Could not boost audio, using default:', err);
+            }
+            
+            // Also play through audio element as backup
             remoteAudioElement.srcObject = event.streams[0];
+            remoteAudioElement.volume = 1.0;
             remoteAudioElement.play()
                 .then(() => console.log('✅ Remote audio playing'))
-                .catch(err => console.error('Error playing remote audio:', err));
+                .catch(err => {
+                    console.error('Error playing remote audio:', err);
+                    // Try to play on user interaction
+                    document.addEventListener('click', () => {
+                        remoteAudioElement.play().catch(e => console.error('Still cannot play:', e));
+                    }, { once: true });
+                });
         };
 
         // Handle connection state
@@ -1511,10 +1533,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showToast('Calling ' + contact.customName + '...', 'success');
                     showCallStatus('Calling...');
                     // Store the contact we're calling
-                    console.log('📞 Contact object:', JSON.stringify(contact));
                     window.currentCallRecipient = contact.contactUserId;
                     window.currentCallContactName = contact.customName;
-                    console.log('📞 Stored currentCallRecipient:', window.currentCallRecipient);
                     
                     // Also emit call-user via socket for real-time connection
                     if (socket && socket.connected) {
@@ -1588,8 +1608,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     socket.on('call-accepted', function(data) {
         console.log('✅ Call accepted by:', data);
-        console.log('📞 window.currentCallRecipient:', window.currentCallRecipient);
-        console.log('📞 data.acceptedByUserId:', data.acceptedByUserId);
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
@@ -1597,12 +1615,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Use the stored recipient ID since we initiated the call
         const recipientId = window.currentCallRecipient || data.acceptedByUserId;
         const contactName = window.currentCallContactName || data.acceptedByName || 'Unknown';
-        console.log('📞 Starting WebRTC as caller to recipientId:', recipientId);
-        if (!recipientId) {
-            console.error('❌ ERROR: No recipient ID for WebRTC call!');
-            showToast('Call failed - no recipient', 'error');
-            return;
-        }
+        console.log('📞 Starting WebRTC as caller to:', recipientId);
         startWebRTCCall(recipientId, true, contactName);
     });
 
