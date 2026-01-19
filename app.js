@@ -726,12 +726,8 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     if (fcmToken) {
-      // FCM message with notification payload - shows as notification and plays ringtone
+      // DATA-ONLY message - our CallFirebaseMessagingService handles it and opens the call screen
       const message = {
-        notification: {
-          title: '📞 Incoming Call',
-          body: `${fromName || 'Someone'} is calling you...`
-        },
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
@@ -741,13 +737,7 @@ app.post('/register-fcm-token', async function(req, res) {
         },
         token: fcmToken,
         android: {
-          priority: 'high',
-          notification: {
-            channelId: 'calls',
-            sound: 'default',
-            priority: 'max',
-            defaultVibrateTimings: true
-          }
+          priority: 'high'
         }
       };
       
