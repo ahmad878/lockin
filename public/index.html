@@ -730,7 +730,7 @@ function showIncomingCallUI(callData, socket) {
                 <i class="fas fa-phone-alt"></i>
             </div>
             <h2 style="font-size: 28px; margin-bottom: 10px; font-weight: 700;">Incoming Call</h2>
-            <p style="font-size: 18px; margin-bottom: 10px; opacity: 0.9;">${callData.callerName || 'Unknown'}</p>
+            <p style="font-size: 18px; margin-bottom: 10px; opacity: 0.9;">${callData.fromName || callData.callerName || 'Unknown'}</p>
             <p style="font-size: 14px; margin-bottom: 30px; opacity: 0.7;">📞 Ringing...</p>
             
             <div style="display: flex; gap: 20px; justify-content: center;">
@@ -767,7 +767,7 @@ function showIncomingCallUI(callData, socket) {
         incomingCallOverlay.remove();
         showToast('Call accepted!', 'success');
         // Start WebRTC as the receiver - pass caller name
-        startWebRTCCall(callData.fromUserId, false, callData.fromName || 'Unknown');
+        startWebRTCCall(callData.fromUserId, false, callData.fromName || callData.callerName || 'Unknown');
     });
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {
