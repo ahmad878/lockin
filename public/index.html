@@ -873,10 +873,26 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
                 remoteAudioElement.id = 'remoteAudio';
                 remoteAudioElement.autoplay = true;
                 remoteAudioElement.playsInline = true;
+                remoteAudioElement.volume = 1.0; // Max volume
                 document.body.appendChild(remoteAudioElement);
             }
             
+            // Use Web Audio API to boost volume
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(event.streams[0]);
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 3.0; // Boost volume 3x
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                console.log('🔊 Audio boosted with gain: 3.0');
+            } catch (err) {
+                console.log('⚠️ Could not boost audio, using default:', err);
+            }
+            
+            // Also play through audio element as backup
             remoteAudioElement.srcObject = event.streams[0];
+            remoteAudioElement.volume = 1.0;
             remoteAudioElement.play()
                 .then(() => console.log('✅ Remote audio playing'))
                 .catch(err => {
