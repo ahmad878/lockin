@@ -726,11 +726,12 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     if (fcmToken) {
-      // ✅ DATA-ONLY MESSAGE - triggers our custom FirebaseMessagingService
-      // No notification payload = our service handles it and launches full-screen call UI
+      // FCM message with notification payload - shows as notification and plays ringtone
       const message = {
-        // Data payload ONLY - this ensures our CallFirebaseMessagingService receives it
-        // even when app is in background/killed
+        notification: {
+          title: '📞 Incoming Call',
+          body: `${fromName || 'Someone'} is calling you...`
+        },
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
@@ -738,13 +739,15 @@ app.post('/register-fcm-token', async function(req, res) {
           type: 'incoming-call',
           timestamp: new Date().toISOString()
         },
-        
         token: fcmToken,
-        
-        // Android config - HIGH PRIORITY ensures delivery even when app is closed
         android: {
           priority: 'high',
-          ttl: 60000 // 60 seconds - call expires after this
+          notification: {
+            channelId: 'calls',
+            sound: 'default',
+            priority: 'max',
+            defaultVibrateTimings: true
+          }
         }
       };
       
