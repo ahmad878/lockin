@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>LockIn - Voice Calls</title>
+    <title>Test Call App</title>
     <script>
         // Check authentication FIRST - redirect to signup if not logged in
         window.userAuthenticated = false;
@@ -35,231 +35,125 @@
         })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
     <style>
-        :root {
-            --primary: #6C5CE7;
-            --primary-light: #A29BFE;
-            --primary-dark: #5849C2;
-            --accent: #00D9FF;
-            --success: #00B894;
-            --warning: #FDCB6E;
-            --danger: #FF6B6B;
-            --bg-dark: #0F0F1A;
-            --bg-card: #1A1A2E;
-            --bg-elevated: #252542;
-            --text-primary: #FFFFFF;
-            --text-secondary: #A0A0B8;
-            --text-muted: #6B6B80;
-            --border: rgba(255,255,255,0.08);
-            --glow: rgba(108, 92, 231, 0.4);
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
-            background: var(--bg-dark);
+            background: #0b141a;
             height: 100vh;
             overflow: hidden;
-            color: var(--text-primary);
         }
 
         .app-container {
             height: 100vh;
             display: flex;
             flex-direction: column;
-            background: var(--bg-dark);
-            position: relative;
-        }
-
-        /* Animated Background */
-        .app-container::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 20%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 80%, rgba(0, 217, 255, 0.1) 0%, transparent 50%);
-            animation: gradientShift 15s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        @keyframes gradientShift {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-5%, -5%) rotate(5deg); }
+            background: #0b141a;
         }
 
         /* Header */
         .app-header {
-            background: rgba(26, 26, 46, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 16px 20px;
+            background: #1f2c33;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--border);
-            position: relative;
-            z-index: 10;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .header-logo {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            color: white;
-            box-shadow: 0 4px 15px var(--glow);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
 
         .header-title {
-            color: var(--text-primary);
-            font-size: 22px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #fff, var(--primary-light));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #e9edef;
+            font-size: 19px;
+            font-weight: 500;
         }
 
         .header-icons {
             display: flex;
-            gap: 8px;
+            gap: 20px;
+            color: #8696a0;
+            font-size: 20px;
         }
 
-        .header-icon-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .header-icons i {
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
+            transition: color 0.2s;
         }
 
-        .header-icon-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px var(--glow);
+        .header-icons i:hover {
+            color: #e9edef;
         }
 
         /* Search Bar */
         .search-bar {
-            padding: 12px 20px 16px;
-            position: relative;
-            z-index: 10;
+            background: #1f2c33;
+            padding: 8px 16px;
+            border-bottom: 1px solid #2a3942;
         }
 
         .search-input-wrapper {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            background: #0b141a;
+            border-radius: 8px;
             display: flex;
             align-items: center;
-            padding: 14px 18px;
+            padding: 8px 12px;
             gap: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .search-input-wrapper:focus-within {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
         }
 
         .search-input-wrapper i {
-            color: var(--text-muted);
-            font-size: 16px;
+            color: #8696a0;
+            font-size: 14px;
         }
 
         .search-input {
             background: transparent;
             border: none;
             outline: none;
-            color: var(--text-primary);
+            color: #e9edef;
             font-size: 15px;
             width: 100%;
-            font-weight: 400;
         }
 
         .search-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        /* Section Title */
-        .section-title {
-            padding: 8px 20px 12px;
-            color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            z-index: 10;
+            color: #667781;
         }
 
         /* Chats List */
         .chats-list {
             flex: 1;
             overflow-y: auto;
-            padding: 0 12px 100px;
-            position: relative;
-            z-index: 10;
+            background: #0b141a;
         }
 
         .chat-item {
             display: flex;
             align-items: center;
-            padding: 14px 16px;
-            gap: 14px;
+            padding: 12px 16px;
+            gap: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 16px;
-            margin-bottom: 8px;
-            background: var(--bg-card);
-            border: 1px solid transparent;
+            transition: background 0.2s;
+            border-bottom: 1px solid #1a252e;
         }
 
         .chat-item:hover {
-            background: var(--bg-elevated);
-            border-color: var(--border);
-            transform: translateX(4px);
+            background: #1a252e;
         }
 
         .chat-item:active {
-            transform: scale(0.98);
+            background: #202c33;
         }
 
         .chat-avatar {
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -267,20 +161,6 @@
             color: white;
             font-weight: 600;
             flex-shrink: 0;
-            position: relative;
-            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
-        }
-
-        .chat-avatar.online::after {
-            content: '';
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 14px;
-            height: 14px;
-            background: var(--success);
-            border: 3px solid var(--bg-card);
-            border-radius: 50%;
         }
 
         .chat-info {
@@ -292,398 +172,32 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .chat-name {
-            color: var(--text-primary);
+            color: #e9edef;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 400;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
         .chat-time {
-            color: var(--text-muted);
+            color: #667781;
             font-size: 12px;
             flex-shrink: 0;
-            font-weight: 500;
         }
 
         .chat-preview {
-            color: var(--text-secondary);
+            color: #667781;
             font-size: 14px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 6px;
-        }
-
-        .chat-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-action-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-
-        .chat-action-btn.call {
-            background: linear-gradient(135deg, var(--success), #00A884);
-            color: white;
-            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
-        }
-
-        .chat-action-btn.call:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
-        }
-
-        .chat-action-btn.delete {
-            background: var(--bg-elevated);
-            color: var(--danger);
-        }
-
-        .chat-action-btn.delete:hover {
-            background: var(--danger);
-            color: white;
-        }
-
-        .unread-badge {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            color: white;
-            border-radius: 10px;
-            min-width: 22px;
-            height: 22px;
-            padding: 0 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        /* Bottom Navigation */
-        .bottom-nav {
-            background: rgba(26, 26, 46, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 10px 20px 20px;
-            display: flex;
-            justify-content: space-around;
-            border-top: 1px solid var(--border);
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 8px 20px;
-            border-radius: 16px;
-            transition: all 0.3s ease;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-item i {
-            font-size: 22px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-            background: rgba(108, 92, 231, 0.15);
-        }
-
-        .nav-item.active i {
-            transform: scale(1.1);
-        }
-
-        .nav-item:hover:not(.active) {
-            color: var(--text-secondary);
-            background: var(--bg-elevated);
-        }
-
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            border-radius: 18px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            font-size: 22px;
-            box-shadow: 0 8px 25px var(--glow);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 101;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .fab:hover {
-            transform: translateY(-4px) scale(1.05);
-            box-shadow: 0 12px 35px var(--glow);
-        }
-
-        .fab:active {
-            transform: scale(0.95);
-        }
-
-        /* Empty State */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
-            padding: 40px;
-            text-align: center;
-        }
-
-        .empty-state-icon {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card));
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 24px;
-            border: 1px solid var(--border);
-        }
-
-        .empty-state-icon i {
-            font-size: 48px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .empty-state h3 {
-            color: var(--text-primary);
-            margin-bottom: 12px;
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-        .empty-state p {
-            font-size: 15px;
-            line-height: 1.6;
-            color: var(--text-muted);
-            max-width: 280px;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            animation: fadeIn 0.2s;
-        }
-
-        .modal {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            width: 90%;
-            max-width: 400px;
-            padding: 28px;
-            animation: slideUp 0.3s ease;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-header {
-            color: var(--text-primary);
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .modal-subtitle {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-
-        .modal-input {
-            width: 100%;
-            padding: 16px 18px;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            color: var(--text-primary);
-            font-size: 15px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .modal-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
-        }
-
-        .modal-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-        }
-
-        .modal-btn {
-            flex: 1;
-            padding: 14px 24px;
-            border-radius: 14px;
-            border: none;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .modal-btn-cancel {
-            background: var(--bg-elevated);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
-
-        .modal-btn-cancel:hover {
-            background: var(--bg-dark);
-            color: var(--text-primary);
-        }
-
-        .modal-btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 4px 15px var(--glow);
-        }
-
-        .modal-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--glow);
-        }
-
-        .modal-btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Toast Notifications */
-        .toast-notification {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 14px 24px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 2001;
-            animation: slideUp 0.3s ease;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--border);
-            font-weight: 500;
-        }
-
-        .toast-notification.success { 
-            background: linear-gradient(135deg, var(--success), #00A884);
-            border: none;
-        }
-        
-        .toast-notification.error { 
-            background: linear-gradient(135deg, var(--danger), #E55656);
-            border: none;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translate(-50%, 30px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        @keyframes ripple {
-            0% { transform: scale(1); opacity: 0.4; }
-            100% { transform: scale(2.5); opacity: 0; }
-        }
-
-        /* Scrollbar */
-        .chats-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .chats-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .chats-list::-webkit-scrollbar-thumb {
-            background: var(--bg-elevated);
-            border-radius: 3px;
-        }
-
-        .chats-list::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-        }
-
-        /* Incoming Call Overlay Enhancement */
-        .incoming-call-overlay {
-            background: linear-gradient(180deg, #1A1A2E 0%, #0F0F1A 100%) !important;
-        }
-
-        /* In-Call UI will use the same styles from showInCallUI function */
-    </style>
-</head>
             gap: 4px;
         }
 
@@ -937,19 +451,10 @@
     <div class="app-container">
         <!-- Header -->
         <div class="app-header">
-            <div class="header-left">
-                <div class="header-logo">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h1 class="header-title">LockIn</h1>
-            </div>
+            <h1 class="header-title">Chats</h1>
             <div class="header-icons">
-                <button class="header-icon-btn" id="searchIcon">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button class="header-icon-btn" id="menuIcon">
-                    <i class="fas fa-ellipsis-v"></i>
-                </button>
+                <i class="fas fa-search" id="searchIcon"></i>
+                <i class="fas fa-ellipsis-v" id="menuIcon"></i>
             </div>
         </div>
 
@@ -957,22 +462,17 @@
         <div class="search-bar">
             <div class="search-input-wrapper">
                 <i class="fas fa-search"></i>
-                <input type="text" class="search-input" placeholder="Search contacts..." id="searchInput">
+                <input type="text" class="search-input" placeholder="Search or start new chat" id="searchInput">
             </div>
         </div>
-
-        <!-- Section Title -->
-        <div class="section-title">Recent Contacts</div>
 
         <!-- Chats List -->
         <div class="chats-list" id="chatsList">
             <!-- Empty state will show here -->
             <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-user-plus"></i>
-                </div>
+                <i class="fas fa-address-book"></i>
                 <h3>No contacts yet</h3>
-                <p>Add your first contact to start making crystal-clear voice calls</p>
+                <p>Tap the button below to add your first contact</p>
             </div>
         </div>
 
@@ -994,7 +494,7 @@
 
         <!-- Floating Action Button -->
         <button class="fab" id="newChatBtn">
-            <i class="fas fa-plus"></i>
+            <i class="fas fa-user-plus"></i>
         </button>
     </div>
 
@@ -1215,66 +715,31 @@ function showIncomingCallUI(callData, socket) {
     console.log('📞 Showing incoming call UI and playing ringtone...');
     playRingtone();
     
-    const callerName = callData.fromName || callData.callerName || 'Unknown';
-    const callerInitial = callerName.charAt(0).toUpperCase();
-    
     const incomingCallOverlay = document.createElement('div');
     incomingCallOverlay.id = 'incomingCallOverlay';
     incomingCallOverlay.style.cssText = `
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(180deg, #1A1A2E 0%, #0F0F1A 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         z-index: 2000; animation: fadeIn 0.3s ease;
     `;
 
     incomingCallOverlay.innerHTML = `
-        <style>
-            @keyframes ring-pulse {
-                0%, 100% { transform: scale(1); opacity: 0.6; }
-                50% { transform: scale(1.15); opacity: 0.3; }
-            }
-            @keyframes avatar-glow {
-                0%, 100% { box-shadow: 0 0 30px rgba(108, 92, 231, 0.4); }
-                50% { box-shadow: 0 0 60px rgba(108, 92, 231, 0.7); }
-            }
-            @keyframes text-pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
-            }
-            .call-btn-accept:active { transform: scale(0.9); }
-            .call-btn-reject:active { transform: scale(0.9); }
-        </style>
-        <div style="text-align: center; color: white; padding: 40px;">
-            <!-- Pulsing rings -->
-            <div style="position: relative; width: 160px; height: 160px; margin: 0 auto 40px;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 160px; height: 160px; border-radius: 50%; border: 2px solid rgba(108, 92, 231, 0.3); animation: ring-pulse 2s ease-in-out infinite;"></div>
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 130px; height: 130px; border-radius: 50%; border: 2px solid rgba(108, 92, 231, 0.4); animation: ring-pulse 2s ease-in-out 0.3s infinite;"></div>
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border-radius: 24px; background: linear-gradient(135deg, #6C5CE7, #5849C2); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; animation: avatar-glow 2s ease-in-out infinite;">
-                    ${callerInitial}
-                </div>
+        <div style="text-align: center; color: white;">
+            <div style="font-size: 64px; margin-bottom: 20px; animation: pulse 2s infinite;">
+                <i class="fas fa-phone-alt"></i>
             </div>
+            <h2 style="font-size: 28px; margin-bottom: 10px; font-weight: 700;">Incoming Call</h2>
+            <p style="font-size: 18px; margin-bottom: 10px; opacity: 0.9;">${callData.fromName || callData.callerName || 'Unknown'}</p>
+            <p style="font-size: 14px; margin-bottom: 30px; opacity: 0.7;">📞 Ringing...</p>
             
-            <!-- Caller info -->
-            <h2 style="font-size: 32px; margin-bottom: 8px; font-weight: 700;">${callerName}</h2>
-            <p style="font-size: 16px; color: #A0A0B8; margin-bottom: 8px;">Incoming voice call</p>
-            <p style="font-size: 14px; color: #00D9FF; animation: text-pulse 1.5s ease-in-out infinite;">
-                <i class="fas fa-phone-volume" style="margin-right: 8px;"></i>Ringing...
-            </p>
-            
-            <!-- Action buttons -->
-            <div style="display: flex; gap: 60px; justify-content: center; margin-top: 60px;">
-                <div style="text-align: center;">
-                    <button id="rejectCallBtn" class="call-btn-reject" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #FF6B6B, #E55656); border: none; color: white; font-size: 26px; cursor: pointer; box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4); transition: all 0.2s ease;">
-                        <i class="fas fa-phone-slash"></i>
-                    </button>
-                    <p style="margin-top: 12px; font-size: 13px; color: #A0A0B8; font-weight: 500;">Decline</p>
-                </div>
-                <div style="text-align: center;">
-                    <button id="acceptCallBtn" class="call-btn-accept" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #00B894, #00A884); border: none; color: white; font-size: 26px; cursor: pointer; box-shadow: 0 8px 25px rgba(0, 184, 148, 0.4); transition: all 0.2s ease;">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                    <p style="margin-top: 12px; font-size: 13px; color: #A0A0B8; font-weight: 500;">Accept</p>
-                </div>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <button id="acceptCallBtn" style="width: 80px; height: 80px; border-radius: 50%; background: #22c55e; border: none; color: white; font-size: 32px; cursor: pointer;">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button id="rejectCallBtn" style="width: 80px; height: 80px; border-radius: 50%; background: #ff4757; border: none; color: white; font-size: 32px; cursor: pointer;">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
             </div>
         </div>
     `;
@@ -1329,29 +794,8 @@ function showIncomingCallUI(callData, socket) {
 function showCallStatus(message) {
     const status = document.createElement('div');
     status.id = 'callStatus';
-    status.style.cssText = `
-        position: fixed; 
-        top: 50%; 
-        left: 50%; 
-        transform: translate(-50%, -50%); 
-        background: linear-gradient(135deg, #1A1A2E, #252542);
-        color: white; 
-        padding: 32px 48px; 
-        border-radius: 24px; 
-        z-index: 1500; 
-        font-size: 18px; 
-        font-weight: 600;
-        text-align: center;
-        border: 1px solid rgba(255,255,255,0.1);
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-    `;
-    status.innerHTML = `
-        <div style="margin-bottom: 16px;">
-            <i class="fas fa-phone-volume" style="font-size: 36px; color: #00B894; animation: pulse 1.5s ease-in-out infinite;"></i>
-        </div>
-        <div>${message}</div>
-        <div style="margin-top: 12px; font-size: 13px; color: #A0A0B8; font-weight: 400;">Waiting for answer...</div>
-    `;
+    status.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px 40px; border-radius: 12px; z-index: 1500; font-size: 16px; font-weight: 600;`;
+    status.textContent = message;
     document.body.appendChild(status);
 }
 
@@ -1579,124 +1023,85 @@ function showInCallUI(contactName) {
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(180deg, #1A1A2E 0%, #0F0F1A 100%);
+        background: #0b141a;
         z-index: 2000;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: space-between;
-        padding: 60px 40px 50px;
+        justify-content: center;
+        gap: 20px;
     `;
 
     const displayName = contactName || remoteUserName || 'Unknown';
     const initial = displayName.charAt(0).toUpperCase();
 
     callUI.innerHTML = `
-        <style>
-            @keyframes wave-animation {
-                0% { transform: scale(1); opacity: 0.4; }
-                100% { transform: scale(2); opacity: 0; }
-            }
-            .call-control-btn {
-                transition: all 0.2s ease;
-            }
-            .call-control-btn:active {
-                transform: scale(0.9);
-            }
-            .call-control-btn.active {
-                background: #6C5CE7 !important;
-            }
-        </style>
-        
-        <!-- Top section with avatar -->
-        <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-            <div style="position: relative; width: 140px; height: 140px; margin-bottom: 24px;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(0, 184, 148, 0.2); animation: wave-animation 2s ease-out infinite;"></div>
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(0, 184, 148, 0.3); animation: wave-animation 2s ease-out 0.5s infinite;"></div>
-                <div style="
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 110px;
-                    height: 110px;
-                    border-radius: 28px;
-                    background: linear-gradient(135deg, #00B894, #00A884);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 44px;
-                    font-weight: 700;
-                    color: white;
-                    box-shadow: 0 10px 40px rgba(0, 184, 148, 0.4);
-                ">${initial}</div>
-            </div>
-            
-            <div style="color: #FFFFFF; font-size: 28px; font-weight: 700; margin-bottom: 8px;">
-                ${displayName}
-            </div>
-            <div style="color: #00D9FF; font-size: 14px; font-weight: 500;" id="callConnectionStatus">
-                <i class="fas fa-signal" style="margin-right: 6px;"></i>Connecting...
-            </div>
+        <div style="
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00a884, #25d366);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 600;
+            color: white;
+        ">${initial}</div>
+        <div style="color: #e9edef; font-size: 24px; font-weight: 600;">
+            ${displayName}
         </div>
-        
-        <!-- Timer section -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="color: #FFFFFF; font-size: 48px; font-weight: 300; letter-spacing: 4px;" id="callTimer">
-                00:00
-            </div>
-            <div style="color: #A0A0B8; font-size: 13px; margin-top: 8px;">
-                <i class="fas fa-lock" style="margin-right: 6px;"></i>End-to-end encrypted
-            </div>
+        <div style="color: #8696a0; font-size: 14px;" id="callConnectionStatus">
+            Connecting...
         </div>
-        
-        <!-- Control buttons -->
-        <div style="display: flex; gap: 20px;">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <button id="muteBtn" class="call-control-btn" style="
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 20px;
-                    background: #252542;
-                    border: 1px solid rgba(255,255,255,0.1);
+        <div style="color: #e9edef; font-size: 20px;" id="callTimer">
+            00:00
+        </div>
+        <div style="display: flex; gap: 30px; margin-top: 40px;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="muteBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
                     color: white;
                     font-size: 22px;
                     cursor: pointer;
                 ">
                     <i class="fas fa-microphone"></i>
                 </button>
-                <span style="color: #A0A0B8; font-size: 12px; font-weight: 500;">Mute</span>
+                <span style="color: #8696a0; font-size: 12px;">Mute</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <button id="speakerBtn" class="call-control-btn" style="
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 20px;
-                    background: #252542;
-                    border: 1px solid rgba(255,255,255,0.1);
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="speakerBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #202c33;
+                    border: none;
                     color: white;
                     font-size: 22px;
                     cursor: pointer;
                 ">
                     <i class="fas fa-volume-up"></i>
                 </button>
-                <span style="color: #A0A0B8; font-size: 12px; font-weight: 500;">Speaker</span>
+                <span style="color: #8696a0; font-size: 12px;">Speaker</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <button id="endCallBtn" class="call-control-btn" style="
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 20px;
-                    background: linear-gradient(135deg, #FF6B6B, #E55656);
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <button id="endCallBtn" style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: #f44336;
                     border: none;
                     color: white;
                     font-size: 22px;
                     cursor: pointer;
-                    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
                 ">
                     <i class="fas fa-phone-slash"></i>
                 </button>
-                <span style="color: #A0A0B8; font-size: 12px; font-weight: 500;">End</span>
+                <span style="color: #8696a0; font-size: 12px;">End</span>
             </div>
         </div>
     `;
@@ -1830,39 +1235,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal">
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #6C5CE7, #5849C2); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);">
-                        <i class="fas fa-user-plus" style="font-size: 28px; color: white;"></i>
-                    </div>
-                    <div class="modal-header" style="margin-bottom: 4px;">Add New Contact</div>
-                    <p class="modal-subtitle" style="margin-bottom: 0;">Enter their details to start calling</p>
-                </div>
-                <div style="position: relative; margin-bottom: 16px;">
-                    <i class="fas fa-envelope" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #6B6B80; font-size: 14px;"></i>
-                    <input 
-                        type="email" 
-                        class="modal-input" 
-                        id="modalEmailInput" 
-                        placeholder="Email address"
-                        style="padding-left: 44px; margin-bottom: 0;"
-                        autofocus
-                    >
-                </div>
-                <div style="position: relative; margin-bottom: 24px;">
-                    <i class="fas fa-user" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #6B6B80; font-size: 14px;"></i>
-                    <input 
-                        type="text" 
-                        class="modal-input" 
-                        id="modalNameInput" 
-                        placeholder="Contact name"
-                        style="padding-left: 44px; margin-bottom: 0;"
-                    >
-                </div>
+                <div class="modal-header">Add New Contact</div>
+                <input 
+                    type="email" 
+                    class="modal-input" 
+                    id="modalEmailInput" 
+                    placeholder="Enter email address"
+                    autofocus
+                >
+                <input 
+                    type="text" 
+                    class="modal-input" 
+                    id="modalNameInput" 
+                    placeholder="Enter contact name"
+                >
                 <div class="modal-buttons">
                     <button class="modal-btn modal-btn-cancel" id="modalCancelBtn">Cancel</button>
-                    <button class="modal-btn modal-btn-primary" id="modalAddBtn">
-                        <i class="fas fa-plus" style="margin-right: 8px;"></i>Add Contact
-                    </button>
+                    <button class="modal-btn modal-btn-primary" id="modalAddBtn">Add Contact</button>
                 </div>
             </div>
         `;
@@ -1975,99 +1364,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (filtered.length === 0) {
             chatsList.innerHTML = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
+                    <i class="fas fa-address-book"></i>
                     <h3>No contacts yet</h3>
-                    <p>Add your first contact to start making crystal-clear voice calls</p>
+                    <p>Tap the button below to add your first contact</p>
                 </div>
             `;
             return;
         }
         
-        chatsList.innerHTML = filtered.map((contact, index) => {
+        chatsList.innerHTML = filtered.map(contact => {
             const initial = contact.customName.charAt(0).toUpperCase();
-            const colors = [
-                'linear-gradient(135deg, #6C5CE7, #5849C2)',
-                'linear-gradient(135deg, #00B894, #00A884)',
-                'linear-gradient(135deg, #FF6B6B, #E55656)',
-                'linear-gradient(135deg, #00D9FF, #00B8D9)',
-                'linear-gradient(135deg, #FDCB6E, #F39C12)',
-                'linear-gradient(135deg, #A29BFE, #6C5CE7)'
-            ];
-            const bgColor = colors[index % colors.length];
             return `
                 <div class="chat-item" data-contact-email="${contact.contactEmail}">
-                    <div class="chat-avatar" style="background: ${bgColor};">${initial}</div>
+                    <div class="chat-avatar">${initial}</div>
                     <div class="chat-info">
                         <div class="chat-header">
                             <div class="chat-name">${contact.customName}</div>
-                            <div class="chat-time">
-                                <i class="fas fa-circle" style="font-size: 8px; color: #00B894;"></i>
-                            </div>
                         </div>
-                        <div class="chat-preview">
-                            <i class="fas fa-envelope" style="font-size: 11px; opacity: 0.6;"></i>
-                            ${contact.contactEmail}
-                        </div>
-                    </div>
-                    <div class="chat-actions">
-                        <button class="chat-action-btn call" data-call-email="${contact.contactEmail}" data-call-name="${contact.customName}">
-                            <i class="fas fa-phone"></i>
-                        </button>
+                        <div class="chat-preview">${contact.contactEmail}</div>
                     </div>
                 </div>
             `;
         }).join('');
         
-        // Add click listeners to contacts (open chat on info click, not whole row)
-        document.querySelectorAll('.chat-item .chat-info').forEach(item => {
+        // Add click listeners to contacts
+        document.querySelectorAll('.chat-item').forEach(item => {
             item.addEventListener('click', () => {
-                const chatItem = item.closest('.chat-item');
-                const email = chatItem.dataset.contactEmail;
+                const email = item.dataset.contactEmail;
                 const contact = userContacts.find(c => c.contactEmail === email);
                 openContactChat(contact);
-            });
-        });
-        
-        // Add click listeners to quick call buttons
-        document.querySelectorAll('.chat-action-btn.call').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const email = btn.dataset.callEmail;
-                const name = btn.dataset.callName;
-                
-                // Find contact's userId
-                const contact = userContacts.find(c => c.contactEmail === email);
-                if (contact && contact.contactUserId) {
-                    showCallStatus('Calling ' + name + '...');
-                    window.currentCallRecipient = contact.contactUserId;
-                    window.currentCallContactName = name;
-                    
-                    try {
-                        const response = await fetch('https://lockin-production.up.railway.app/send-message-notification', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({
-                                toEmail: email,
-                                fromUserId: currentUserId,
-                                fromName: currentUserName || 'Someone'
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (!data.success) {
-                            hideCallStatus();
-                            showToast(data.message || 'Failed to call', 'error');
-                        }
-                    } catch (error) {
-                        hideCallStatus();
-                        showToast('Failed to connect call', 'error');
-                    }
-                } else {
-                    showToast('Contact not found', 'error');
-                }
             });
         });
     }
@@ -2075,41 +1400,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ==================== OPEN CONTACT CHAT ====================
     function openContactChat(contact) {
         selectedContact = contact;
-        const initial = contact.customName.charAt(0).toUpperCase();
         
         // Create chat view
         const chatView = document.createElement('div');
         chatView.className = 'chat-view';
         chatView.innerHTML = `
             <div class="chat-header-bar">
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <button class="back-btn">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <div class="chat-avatar" style="width: 44px; height: 44px; font-size: 18px; border-radius: 14px; background: linear-gradient(135deg, #6C5CE7, #5849C2);">
-                        ${initial}
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-arrow-left back-btn"></i>
+                    <div class="chat-avatar" style="width: 40px; height: 40px; font-size: 16px;">
+                        ${contact.customName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <div style="color: #FFFFFF; font-size: 17px; font-weight: 600;">${contact.customName}</div>
-                        <div style="color: #A0A0B8; font-size: 13px;">${contact.contactEmail}</div>
+                        <div style="color: #e9edef; font-size: 16px; font-weight: 500;">${contact.customName}</div>
+                        <div style="color: #8696a0; font-size: 13px;">${contact.contactEmail}</div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="call-btn">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                    <button class="menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <i class="fas fa-phone call-btn" style="color: #25d366; font-size: 20px; cursor: pointer;"></i>
+                    <i class="fas fa-ellipsis-v" style="color: #8696a0; font-size: 20px; cursor: pointer;"></i>
                 </div>
             </div>
             <div class="chat-messages">
                 <div class="empty-state">
-                    <div class="empty-state-icon" style="width: 100px; height: 100px; border-radius: 25px;">
-                        <i class="fas fa-comments" style="font-size: 40px;"></i>
-                    </div>
-                    <h3>Start a conversation</h3>
-                    <p>Chat feature coming soon! For now, tap the phone icon to make a voice call.</p>
+                    <i class="fas fa-comments"></i>
+                    <h3>No messages yet</h3>
+                    <p>Chat feature coming soon!</p>
                 </div>
             </div>
             <div class="chat-input-bar">
@@ -2127,57 +1443,29 @@ document.addEventListener('DOMContentLoaded', async function() {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: var(--bg-dark, #0F0F1A);
+                background: #0b141a;
                 z-index: 1000;
                 display: flex;
                 flex-direction: column;
             }
             .chat-header-bar {
-                background: rgba(26, 26, 46, 0.95);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                padding: 12px 16px;
+                background: #1f2c33;
+                padding: 10px 16px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                box-shadow: 0 1px 2px rgba(0,0,0,0.3);
             }
-            .back-btn, .menu-btn {
-                width: 40px;
-                height: 40px;
-                border-radius: 12px;
-                background: #252542;
-                border: 1px solid rgba(255,255,255,0.08);
-                color: #A0A0B8;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .back-btn {
+                color: #8696a0;
+                font-size: 20px;
                 cursor: pointer;
-                transition: all 0.2s ease;
-                font-size: 16px;
             }
-            .back-btn:hover, .menu-btn:hover {
-                background: #6C5CE7;
-                color: white;
-            }
-            .call-btn {
-                width: 40px;
-                height: 40px;
-                border-radius: 12px;
-                background: linear-gradient(135deg, #00B894, #00A884);
-                border: none;
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                font-size: 16px;
-                box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+            .back-btn:hover {
+                color: #e9edef;
             }
             .call-btn:hover {
-                transform: scale(1.05);
-                box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
+                color: #20bd5a;
             }
             .chat-messages {
                 flex: 1;
@@ -2188,33 +1476,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                 justify-content: center;
             }
             .chat-input-bar {
-                background: rgba(26, 26, 46, 0.95);
-                backdrop-filter: blur(20px);
-                padding: 12px 16px;
+                background: #1f2c33;
+                padding: 10px 16px;
                 display: flex;
                 gap: 12px;
                 align-items: center;
-                border-top: 1px solid rgba(255,255,255,0.08);
             }
             .chat-input-bar input {
                 flex: 1;
-                background: #252542;
-                border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 14px;
-                padding: 14px 18px;
-                color: #FFFFFF;
+                background: #2a3942;
+                border: none;
+                border-radius: 20px;
+                padding: 10px 16px;
+                color: #e9edef;
                 font-size: 15px;
             }
             .chat-input-bar button {
-                width: 48px;
-                height: 48px;
-                border-radius: 14px;
-                background: linear-gradient(135deg, #6C5CE7, #5849C2);
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                background: #25d366;
                 border: none;
                 color: white;
                 font-size: 16px;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
             }
         `;
         document.head.appendChild(style);
@@ -2309,64 +1594,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
         }
-        
-        // Check if there's accepted call data from Android IncomingCallActivity
-        if (window.acceptedCallData) {
-            console.log('📞 Found pending accepted call data from Android:', window.acceptedCallData);
-            handleAcceptedCall(window.acceptedCallData);
-            window.acceptedCallData = null;
-        }
-        
-        // Check if there's pending call data from sessionStorage (redirect from main.html)
-        const pendingCall = sessionStorage.getItem('pendingAcceptedCall');
-        if (pendingCall) {
-            console.log('📞 Found pending accepted call in sessionStorage:', pendingCall);
-            sessionStorage.removeItem('pendingAcceptedCall');
-            try {
-                const callData = JSON.parse(pendingCall);
-                handleAcceptedCall(callData);
-            } catch (e) {
-                console.error('Error parsing pending call data:', e);
-            }
-        }
     });
-
-    // Handle accepted call from Android native IncomingCallActivity
-    window.handleAcceptedCall = function(callData) {
-        console.log('📲 Handling accepted call from Android:', callData);
-        
-        if (!callData || !callData.callerId) {
-            console.error('❌ Invalid call data:', callData);
-            return;
-        }
-        
-        // Make sure socket is connected
-        if (!socket || !socket.connected) {
-            console.log('⏳ Socket not ready, waiting...');
-            setTimeout(() => window.handleAcceptedCall(callData), 500);
-            return;
-        }
-        
-        // Make sure user is registered
-        if (!currentUserId) {
-            console.log('⏳ User not ready, waiting...');
-            setTimeout(() => window.handleAcceptedCall(callData), 500);
-            return;
-        }
-        
-        // Emit accept-call to server to notify the caller
-        socket.emit('accept-call', {
-            fromUserId: callData.callerId,
-            acceptedByUserId: currentUserId,
-            acceptedByName: currentUserName || 'Unknown'
-        });
-        
-        showToast('Call accepted!', 'success');
-        
-        // Start WebRTC as the receiver
-        console.log('🎙️ Starting WebRTC call as receiver with:', callData.callerId);
-        startWebRTCCall(callData.callerId, false, callData.callerName || 'Unknown');
-    };
 
     socket.on('incoming-call', async function(callData) {
         console.log('📞 Incoming call from:', callData);
