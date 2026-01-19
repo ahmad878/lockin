@@ -159,6 +159,10 @@ console.log('✅ Firebase Admin initialized');
       type: Boolean,
       default: false
     },
+    fcmToken: {
+      type: String,
+      default: null
+    },
     createdAt: {
       type: Date,
       default: Date.now
@@ -281,7 +285,7 @@ console.log('✅ Firebase Admin initialized');
     });
   });
 
-  // Register FCM token
+  // Register FCM token - saves to MongoDB for persistence
 app.post('/register-fcm-token', async function(req, res) {
     try {
         const { token, userId } = req.body;
@@ -293,8 +297,23 @@ app.post('/register-fcm-token', async function(req, res) {
             });
         }
         
+        // Save to MongoDB for persistence (survives server restarts)
+        const user = await User.findOneAndUpdate(
+            { _id: userId },
+            { fcmToken: token },
+            { new: true }
+        );
+        
+        if (!user) {
+            console.warn(`⚠️ User not found for ID: ${userId}`);
+            // Still keep in memory as fallback
+            userFCMTokens.set(userId, token);
+        } else {
+            console.log(`✅ FCM token saved to MongoDB for user ${userId} (${user.email})`);
+        }
+        
+        // Also keep in memory for quick access
         userFCMTokens.set(userId, token);
-        console.log(`✅ FCM token registered for user ${userId}`);
         
         return res.status(200).json({
             success: true,
@@ -309,11 +328,11 @@ app.post('/register-fcm-token', async function(req, res) {
     }
 });
 
-  // ===== Root Route =====
+  // ===== Root Route (serves index.html - the phone UI) =====
   app.get("/", (req, res) => {
-    const dashboardPath = path.join(__dirname, "public", "dashboard.html");
-    if (require("fs").existsSync(dashboardPath)) {
-      res.sendFile(dashboardPath);
+    const indexPath = path.join(__dirname, "public", "index.html");
+    if (require("fs").existsSync(indexPath)) {
+      res.sendFile(indexPath);
     } else {
       res.json({
         success: true,
@@ -326,6 +345,12 @@ app.post('/register-fcm-token', async function(req, res) {
         }
       });
     }
+  });
+  
+  // ===== Signup Route (serves signup.html) =====
+  app.get("/signup", (req, res) => {
+    const signupPath = path.join(__dirname, "public", "signup.html");
+    res.sendFile(signupPath);
   });
 
 
@@ -588,7 +613,7 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
-  app.post('/logout', function(req, res) {
+  app.post('/logout', async function(req, res) {
   try {
     const token = req.cookies[COOKIE_NAME];
     
@@ -598,8 +623,10 @@ app.post('/register-fcm-token', async function(req, res) {
       if (decoded && decoded.id) {
         // Remove user from Socket.IO map
         userSocketMap.delete(decoded.id);
-        // Remove FCM token
+        // Remove FCM token from memory
         userFCMTokens.delete(decoded.id);
+        // Clear FCM token from MongoDB too
+        await User.findByIdAndUpdate(decoded.id, { fcmToken: null });
         console.log(`🔓 User ${decoded.id} logged out, removed from active connections`);
       }
     }
@@ -683,7 +710,20 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     // ALWAYS send FCM notification (works even if app is closed)
-    const fcmToken = userFCMTokens.get(targetUserId);
+    // Try memory first, then MongoDB
+    let fcmToken = userFCMTokens.get(targetUserId);
+    
+    if (!fcmToken) {
+      // Fetch from MongoDB (persisted tokens)
+      console.log(`🔍 Fetching FCM token from MongoDB for user ${targetUserId}...`);
+      const userWithToken = await User.findById(targetUserId);
+      if (userWithToken && userWithToken.fcmToken) {
+        fcmToken = userWithToken.fcmToken;
+        // Cache in memory for next time
+        userFCMTokens.set(targetUserId, fcmToken);
+        console.log(`✅ Found FCM token in MongoDB for user ${targetUserId}`);
+      }
+    }
     
     if (fcmToken) {
       // ✅ FIXED MESSAGE STRUCTURE
@@ -746,15 +786,16 @@ app.post('/register-fcm-token', async function(req, res) {
         console.error('❌ FCM send error:', fcmError);
         console.error('FCM error details:', JSON.stringify(fcmError, null, 2));
         
-        // If token is invalid, remove it
+        // If token is invalid, remove it from both memory and MongoDB
         if (fcmError.code === 'messaging/invalid-registration-token' || 
             fcmError.code === 'messaging/registration-token-not-registered') {
           userFCMTokens.delete(targetUserId);
+          await User.findByIdAndUpdate(targetUserId, { fcmToken: null });
           console.log(`🗑️ Removed invalid FCM token for user ${targetUserId}`);
         }
       }
     } else {
-      console.log('⚠️ No FCM token found for user:', targetUserId);
+      console.log('⚠️ No FCM token found for user:', targetUserId, '- they may not have opened the app yet');
     }
     
     return res.status(200).json({
