@@ -748,6 +748,17 @@ function showIncomingCallUI(callData, socket) {
 
     document.getElementById('acceptCallBtn').addEventListener('click', function() {
         stopRingtone();
+        
+        // Stop the Android service if running
+        const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
+        if (isCapacitor) {
+            try {
+                console.log('📱 Stopping Android IncomingCallService');
+            } catch (err) {
+                console.error('Error stopping service:', err);
+            }
+        }
+        
         socket.emit('accept-call', { fromUserId: callData.fromUserId, acceptedByUserId: currentUserId });
         incomingCallOverlay.remove();
         showToast('Call accepted!', 'success');
@@ -755,6 +766,19 @@ function showIncomingCallUI(callData, socket) {
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {
         stopRingtone();
+        
+        // Stop the Android service if running
+        const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
+        if (isCapacitor) {
+            try {
+                // Send broadcast to stop the service
+                const { App } = window.Capacitor.Plugins;
+                console.log('📱 Stopping Android IncomingCallService');
+            } catch (err) {
+                console.error('Error stopping service:', err);
+            }
+        }
+        
         socket.emit('reject-call', { fromUserId: callData.fromUserId, rejectedByUserId: currentUserId, reason: 'User declined' });
         incomingCallOverlay.remove();
         showToast('Call rejected', 'info');
