@@ -833,17 +833,46 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
         // Show in-call UI immediately
         showInCallUI(remoteUserName);
 
-        // Request microphone permission
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // Request microphone with specific constraints for better quality
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: false, // Disable auto gain so we can control it
+                channelCount: 1,
+                sampleRate: 48000
+            }, 
+            video: false 
+        });
         console.log('✅ Microphone access granted');
+
+        // BOOST MICROPHONE INPUT using Web Audio API
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            await audioContext.resume();
+            
+            const source = audioContext.createMediaStreamSource(localStream);
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = 5.0; // Boost mic input 5x
+            
+            const destination = audioContext.createMediaStreamDestination();
+            source.connect(gainNode);
+            gainNode.connect(destination);
+            
+            // Use the boosted stream instead of original
+            localStream = destination.stream;
+            console.log('🔊 Microphone boosted with gain: 5.0');
+        } catch (err) {
+            console.error('⚠️ Could not boost microphone:', err);
+        }
 
         // Create peer connection
         peerConnection = new RTCPeerConnection(configuration);
 
-        // Add local audio track
+        // Add local audio track (now boosted)
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
-            console.log('📤 Added local audio track');
+            console.log('📤 Added boosted local audio track');
         });
 
         // Handle ICE candidates
