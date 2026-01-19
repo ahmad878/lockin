@@ -391,6 +391,37 @@ function stopRingtone() {
     }
 }
 
+// ==================== NATIVE CALL HANDLERS ====================
+// These are called by MainActivity when user accepts/rejects from native IncomingCallActivity
+window.handleNativeCallAccept = function(callerId, callerName, callId) {
+    console.log('✅ Native call accepted:', callerName);
+    showToast(`Call with ${callerName} connected!`, 'success');
+    
+    // Emit accept event to server via Socket.IO
+    if (window.mainSocket && currentUserId) {
+        window.mainSocket.emit('accept-call', {
+            fromUserId: callerId,
+            acceptedByUserId: currentUserId,
+            callId: callId
+        });
+    }
+};
+
+window.handleNativeCallReject = function(callerId, callerName, callId) {
+    console.log('❌ Native call rejected:', callerName);
+    showToast(`Call from ${callerName} declined`, 'info');
+    
+    // Emit reject event to server via Socket.IO
+    if (window.mainSocket && currentUserId) {
+        window.mainSocket.emit('reject-call', {
+            fromUserId: callerId,
+            rejectedByUserId: currentUserId,
+            callId: callId,
+            reason: 'User declined'
+        });
+    }
+};
+
 function playGeneratedRingtone() {
     console.log('🎵 Playing generated ringtone...');
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -647,6 +678,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         reconnectionDelayMax: 5000,
         reconnectionAttempts: 5
     });
+    
+    // Expose socket globally for native call handlers
+    window.mainSocket = socket;
 
     socket.on('connect', function() {
         console.log('✅ Socket.IO connected:', socket.id);

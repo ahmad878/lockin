@@ -726,15 +726,11 @@ app.post('/register-fcm-token', async function(req, res) {
     }
     
     if (fcmToken) {
-      // ✅ FIXED MESSAGE STRUCTURE
+      // ✅ DATA-ONLY MESSAGE - triggers our custom FirebaseMessagingService
+      // No notification payload = our service handles it and launches full-screen call UI
       const message = {
-        // Root notification - shows when app is closed/background
-        notification: {
-          title: '📞 Incoming Call',
-          body: `${fromName || 'Someone'} is calling you...`
-        },
-        
-        // Data payload - for custom handling
+        // Data payload ONLY - this ensures our CallFirebaseMessagingService receives it
+        // even when app is in background/killed
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
@@ -745,37 +741,10 @@ app.post('/register-fcm-token', async function(req, res) {
         
         token: fcmToken,
         
-        // ✅ Android config with ringtone
+        // Android config - HIGH PRIORITY ensures delivery even when app is closed
         android: {
           priority: 'high',
-          notification: {
-            sound: 'default',
-            channel_id: 'calls',  // ✅ Uses the calls channel configured in MainActivity with ringtone
-            priority: 'high',
-            default_sound: true,
-            default_vibrate_timings: true,
-            tag: 'incoming-call',
-            click_action: 'FLUTTER_NOTIFICATION_CLICK'  // For Flutter apps
-          }
-        },
-        
-        // iOS config (if you support iOS later)
-        apns: {
-          headers: {
-            'apns-priority': '10',
-            'apns-push-type': 'alert'
-          },
-          payload: {
-            aps: {
-              alert: {
-                title: '📞 Incoming Call',
-                body: `${fromName || 'Someone'} is calling you...`
-              },
-              sound: 'default',
-              badge: 1,
-              'content-available': 1
-            }
-          }
+          ttl: 60000 // 60 seconds - call expires after this
         }
       };
       
