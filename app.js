@@ -771,12 +771,12 @@ app.post('/register-fcm-token', async function(req, res) {
         });
       }
 
-      // Check if contact user exists
+      // Check if contact user exists in database
       const contactUser = await User.findOne({ email: cleanEmail });
       if (!contactUser) {
         return res.status(404).json({
           success: false,
-          message: 'User with this email does not exist'
+          message: 'This user has not signed up for the app yet'
         });
       }
 
