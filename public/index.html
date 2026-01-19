@@ -26,11 +26,11 @@
                 } else {
                     // NOT logged in - redirect to signup
                     console.log('❌ Not authenticated, redirecting to signup...');
-                    window.location.href = '/signup';
+                    window.location.href = '/signup.html';
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                window.location.href = '/signup';
+                window.location.href = '/signup.html';
             }
         })();
     </script>
@@ -470,9 +470,9 @@
         <div class="chats-list" id="chatsList">
             <!-- Empty state will show here -->
             <div class="empty-state">
-                <i class="fas fa-comments"></i>
-                <h3>No chats yet</h3>
-                <p>Tap the button below to start a new conversation</p>
+                <i class="fas fa-address-book"></i>
+                <h3>No contacts yet</h3>
+                <p>Tap the button below to add your first contact</p>
             </div>
         </div>
 
