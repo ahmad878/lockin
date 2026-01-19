@@ -1019,6 +1019,7 @@ app.post('/register-fcm-token', async function(req, res) {
         data: {
           fromUserId: fromUserId,
           callerName: fromName || 'Someone',
+          callerEmail: caller ? caller.email : '',
           callId: `${fromUserId}-${Date.now()}`,
           type: 'incoming-call',
           timestamp: new Date().toISOString()
