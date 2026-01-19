@@ -793,7 +793,15 @@ function showIncomingCallUI(callData, socket) {
         });
         
         incomingCallOverlay.remove();
-        showToast('Call accepted!', 'success');
+        showToast('Connecting to call...', 'success');
+        
+        // Redirect to index.html with call data to handle the WebRTC connection
+        const callParams = new URLSearchParams({
+            incomingCall: 'true',
+            fromUserId: callData.fromUserId,
+            callerName: callData.fromName || callData.callerName || 'Unknown'
+        });
+        window.location.href = `/index.html?${callParams.toString()}`;
     });
 
     document.getElementById('rejectCallBtn').addEventListener('click', function() {

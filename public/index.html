@@ -1601,6 +1601,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
             
+            // Check if redirected from main.html with call acceptance
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('incomingCall') === 'true') {
+                console.log('📞 Redirected from main.html to handle accepted call');
+                const fromUserId = urlParams.get('fromUserId');
+                const callerName = urlParams.get('callerName') || 'Unknown';
+                
+                if (fromUserId) {
+                    // Clear URL parameters
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                    // Start the WebRTC call immediately as receiver
+                    showToast('Connecting to call...', 'success');
+                    startWebRTCCall(fromUserId, false, callerName);
+                }
+            }
+            
             // If there's a pending incoming call from notification tap, show it now
             if (window.pendingIncomingCall) {
                 console.log('📞 Processing pending incoming call from notification tap');
