@@ -806,7 +806,7 @@ function showIncomingCallUI(callData, socket) {
         currentCallStartTime = Date.now();
         
         // Store caller info for call history
-        window.currentCallContactEmail = callData.callerEmail || '';
+        window.currentCallContactEmail = callData.fromEmail || callData.callerEmail || '';
         window.currentCallContactName = callData.fromName || callData.callerName || 'Unknown';
         
         socket.emit('accept-call', { 
@@ -838,7 +838,7 @@ function showIncomingCallUI(callData, socket) {
         // Save missed call to history (for the receiver who rejected)
         saveCallToHistory({
             callerId: callData.fromUserId,
-            callerEmail: callData.callerEmail || '',
+            callerEmail: callData.fromEmail || callData.callerEmail || '',
             callerName: callData.fromName || callData.callerName || 'Unknown',
             receiverId: currentUserId,
             receiverEmail: currentUserEmail,
@@ -1833,7 +1833,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         socket.emit('call-user', {
                             fromUserId: currentUserId,
                             toUserId: contact.contactUserId,
-                            callerName: currentUserName || 'Someone'
+                            callerName: currentUserName || 'Someone',
+                            callerEmail: currentUserEmail || ''
                         });
                         console.log('📞 Emitted call-user to:', contact.contactUserId);
                     }

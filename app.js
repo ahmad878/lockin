@@ -1403,7 +1403,7 @@ app.post('/register-fcm-token', async function(req, res) {
 
     // ===== Incoming Call Handler =====
     socket.on("call-user", (callData) => {
-      const { fromUserId, toUserId, callerName } = callData;
+      const { fromUserId, toUserId, callerName, callerEmail } = callData;
       const recipientSocketId = userSocketMap.get(toUserId);
 
       console.log(`📞 Call initiated: ${fromUserId} -> ${toUserId}`);
@@ -1414,6 +1414,7 @@ app.post('/register-fcm-token', async function(req, res) {
         io.to(recipientSocketId).emit("incoming-call", {
           fromUserId: fromUserId,
           fromName: callerName,
+          fromEmail: callerEmail,
           callId: `${fromUserId}-${Date.now()}`,
           timestamp: new Date().toISOString()
         });
