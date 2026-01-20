@@ -2061,15 +2061,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (currentCallStartTime) {
             const callDuration = Math.floor((Date.now() - currentCallStartTime) / 1000);
             
-            // Save call to history (for the receiver)
+            // Save call to history - use isCaller to determine correct roles
             saveCallToHistory({
-                callerId: data.endedBy,
-                callerEmail: window.currentCallContactEmail || '',
-                callerName: remoteUserName || 'Unknown',
-                receiverId: currentUserId,
-                receiverEmail: currentUserEmail,
-                receiverName: currentUserName,
-                type: 'incoming',
+                callerId: isCaller ? currentUserId : remoteUserId,
+                callerEmail: isCaller ? currentUserEmail : (window.currentCallContactEmail || ''),
+                callerName: isCaller ? currentUserName : (remoteUserName || 'Unknown'),
+                receiverId: isCaller ? remoteUserId : currentUserId,
+                receiverEmail: isCaller ? (window.currentCallContactEmail || '') : currentUserEmail,
+                receiverName: isCaller ? (remoteUserName || 'Unknown') : currentUserName,
+                type: isCaller ? 'outgoing' : 'incoming',
                 status: 'completed',
                 duration: callDuration
             });
