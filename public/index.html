@@ -806,7 +806,7 @@ function showIncomingCallUI(callData, socket) {
         currentCallStartTime = Date.now();
         
         // Store caller info for call history
-        window.currentCallContactEmail = callData.fromEmail || callData.callerEmail || '';
+        window.currentCallContactEmail = callData.callerEmail || '';
         window.currentCallContactName = callData.fromName || callData.callerName || 'Unknown';
         
         socket.emit('accept-call', { 
