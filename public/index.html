@@ -813,6 +813,8 @@ let isCaller = false;
 let callUIShown = false;
 let socket = null; // Will be initialized after DOM loads
 let remoteAudioElement = null;
+let pendingIceCandidates = []; // Buffer for ICE candidates received before remote description
+let connectionTimeout = null;
 
 const configuration = {
     iceServers: [
@@ -909,12 +911,40 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
             console.log('🔌 Connection state:', peerConnection.connectionState);
             updateCallStatus(peerConnection.connectionState);
             
+            if (peerConnection.connectionState === 'connected') {
+                // Clear timeout when connected
+                if (connectionTimeout) {
+                    clearTimeout(connectionTimeout);
+                    connectionTimeout = null;
+                }
+            }
+            
             if (peerConnection.connectionState === 'disconnected' || 
                 peerConnection.connectionState === 'failed' ||
                 peerConnection.connectionState === 'closed') {
                 endWebRTCCall();
             }
         };
+        
+        // Set connection timeout (20 seconds) - only triggers if stuck
+        connectionTimeout = setTimeout(() => {
+            if (peerConnection && peerConnection.connectionState !== 'connected') {
+                console.log('⏰ Connection timeout - attempting ICE restart');
+                try {
+                    peerConnection.restartIce();
+                    // Give it another 10 seconds after restart
+                    connectionTimeout = setTimeout(() => {
+                        if (peerConnection && peerConnection.connectionState !== 'connected') {
+                            console.log('❌ Connection failed after ICE restart');
+                            showToast('Connection failed. Please try again.', 'error');
+                            endWebRTCCall();
+                        }
+                    }, 10000);
+                } catch (e) {
+                    console.error('ICE restart failed:', e);
+                }
+            }
+        }, 20000);
 
         // If we are the caller, create and send offer
         if (isCaller && socket) {
@@ -969,6 +999,19 @@ async function handleWebRTCOffer(offer, fromUserId) {
 
         console.log('📡 Setting remote offer');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        
+        // Process any buffered ICE candidates
+        if (pendingIceCandidates.length > 0) {
+            console.log(`🧊 Processing ${pendingIceCandidates.length} buffered ICE candidates`);
+            for (const candidate of pendingIceCandidates) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn('⚠️ Error adding buffered ICE candidate:', e);
+                }
+            }
+            pendingIceCandidates = [];
+        }
 
         console.log('📡 Creating answer');
         const answer = await peerConnection.createAnswer();
@@ -992,6 +1035,19 @@ async function handleWebRTCAnswer(answer) {
     try {
         console.log('📡 Setting remote answer');
         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        
+        // Process any buffered ICE candidates
+        if (pendingIceCandidates.length > 0) {
+            console.log(`🧊 Processing ${pendingIceCandidates.length} buffered ICE candidates`);
+            for (const candidate of pendingIceCandidates) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn('⚠️ Error adding buffered ICE candidate:', e);
+                }
+            }
+            pendingIceCandidates = [];
+        }
     } catch (error) {
         console.error('❌ Error handling answer:', error);
     }
@@ -1000,8 +1056,15 @@ async function handleWebRTCAnswer(answer) {
 async function handleICECandidate(candidate) {
     try {
         if (peerConnection) {
-            console.log('🧊 Adding ICE candidate');
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            // Check if remote description is set
+            if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+                console.log('🧊 Adding ICE candidate');
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } else {
+                // Buffer the candidate until remote description is set
+                console.log('🧊 Buffering ICE candidate (no remote description yet)');
+                pendingIceCandidates.push(candidate);
+            }
         }
     } catch (error) {
         console.error('❌ Error adding ICE candidate:', error);
@@ -1152,6 +1215,15 @@ function showInCallUI(contactName) {
 
 function endWebRTCCall() {
     console.log('🔴 Ending WebRTC call');
+    
+    // Clear connection timeout
+    if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+        connectionTimeout = null;
+    }
+    
+    // Clear buffered ICE candidates
+    pendingIceCandidates = [];
 
     // Stop local stream
     if (localStream) {
