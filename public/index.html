@@ -247,6 +247,24 @@
             color: #e9edef;
         }
 
+        /* Call item styling */
+        .call-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .call-item .call-action {
+            margin-left: auto;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .call-item .call-action:hover {
+            background: rgba(37, 211, 102, 0.1);
+        }
+
         /* Floating Action Button */
         .fab {
             position: fixed;
@@ -478,11 +496,11 @@
 
         <!-- Bottom Navigation -->
         <div class="bottom-nav">
-            <div class="nav-item active">
+            <div class="nav-item active" id="chatsNav">
                 <i class="fas fa-message"></i>
                 <span>Chats</span>
             </div>
-            <div class="nav-item">
+            <div class="nav-item" id="callsNav">
                 <i class="fas fa-phone"></i>
                 <span>Calls</span>
             </div>
@@ -501,12 +519,15 @@
 <script>
 let currentUserId = null;
 let currentUserName = null;
+let currentUserEmail = null;
 let ringtoneAudio = null;
 let ringtoneContext = null;
 let ringtoneOscillator = null;
 let isRingtonePlaying = false;
 let userContacts = [];
+let userCalls = [];
 let selectedContact = null;
+let currentCallStartTime = null;
 
 function showToast(message, type = 'info') {
     const existingToast = document.querySelector('.toast-notification');
@@ -759,6 +780,13 @@ function showIncomingCallUI(callData, socket) {
             }
         }
         
+        // Set call start time
+        currentCallStartTime = Date.now();
+        
+        // Store caller info for call history
+        window.currentCallContactEmail = callData.callerEmail || '';
+        window.currentCallContactName = callData.fromName || callData.callerName || 'Unknown';
+        
         socket.emit('accept-call', { 
             fromUserId: callData.fromUserId, 
             acceptedByUserId: currentUserId,
@@ -784,6 +812,19 @@ function showIncomingCallUI(callData, socket) {
                 console.error('Error stopping service:', err);
             }
         }
+        
+        // Save missed call to history (for the receiver who rejected)
+        saveCallToHistory({
+            callerId: callData.fromUserId,
+            callerEmail: callData.callerEmail || '',
+            callerName: callData.fromName || callData.callerName || 'Unknown',
+            receiverId: currentUserId,
+            receiverEmail: currentUserEmail,
+            receiverName: currentUserName,
+            type: 'incoming',
+            status: 'rejected',
+            duration: 0
+        });
         
         socket.emit('reject-call', { fromUserId: callData.fromUserId, rejectedByUserId: currentUserId, reason: 'User declined' });
         incomingCallOverlay.remove();
@@ -1202,7 +1243,25 @@ function showInCallUI(contactName) {
 
     // End call button
     document.getElementById('endCallBtn').addEventListener('click', () => {
+        // Calculate call duration
+        const callDuration = currentCallStartTime ? Math.floor((Date.now() - currentCallStartTime) / 1000) : 0;
+        
+        // Save call to history
+        saveCallToHistory({
+            callerId: isCaller ? currentUserId : remoteUserId,
+            callerEmail: isCaller ? currentUserEmail : (window.currentCallContactEmail || ''),
+            callerName: isCaller ? currentUserName : remoteUserName,
+            receiverId: isCaller ? remoteUserId : currentUserId,
+            receiverEmail: isCaller ? (window.currentCallContactEmail || '') : currentUserEmail,
+            receiverName: isCaller ? remoteUserName : currentUserName,
+            type: isCaller ? 'outgoing' : 'incoming',
+            status: 'completed',
+            duration: callDuration
+        });
+        
         clearInterval(timerInterval);
+        currentCallStartTime = null;
+        
         if (socket) {
             socket.emit('end-call', { fromUserId: currentUserId, toUserId: remoteUserId });
         }
@@ -1261,6 +1320,7 @@ function endWebRTCCall() {
     isCaller = false;
     window.currentCallRecipient = null;
     window.currentCallContactName = null;
+    window.currentCallContactEmail = null;
 
     hideCallStatus();
 }
@@ -1281,6 +1341,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             currentUserId = window.userData.id;
             currentUserName = window.userData.fullname;
+            currentUserEmail = window.userData.email;
             console.log('✅ User loaded:', currentUserId, currentUserName);
             
             // Setup push notifications AFTER we have user ID
@@ -1423,6 +1484,166 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (error) {
             console.error('Error loading contacts:', error);
         }
+    }
+    
+    // ==================== LOAD CALL HISTORY ====================
+    async function loadCallHistory() {
+        try {
+            const response = await fetch('https://lockin-production.up.railway.app/calls', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                userCalls = result.calls || [];
+                displayCallHistory();
+            } else {
+                console.error('Failed to load call history:', result.message);
+            }
+        } catch (error) {
+            console.error('Error loading call history:', error);
+        }
+    }
+    
+    // ==================== SAVE CALL TO HISTORY ====================
+    async function saveCallToHistory(callData) {
+        try {
+            const response = await fetch('https://lockin-production.up.railway.app/calls/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(callData)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                console.log('📞 Call saved to history:', result.call);
+                // Refresh call history
+                loadCallHistory();
+            } else {
+                console.error('Failed to save call:', result.message);
+            }
+        } catch (error) {
+            console.error('Error saving call:', error);
+        }
+    }
+    
+    // ==================== DISPLAY CALL HISTORY ====================
+    function displayCallHistory() {
+        if (userCalls.length === 0) {
+            chatsList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-phone-slash"></i>
+                    <h3>No calls yet</h3>
+                    <p>Your call history will appear here</p>
+                </div>
+            `;
+            return;
+        }
+        
+        chatsList.innerHTML = userCalls.map(call => {
+            const isOutgoing = call.type === 'outgoing';
+            const isMissed = call.status === 'missed' || call.type === 'missed';
+            const isRejected = call.status === 'rejected';
+            
+            // Determine the other party (who we called or who called us)
+            const otherPartyName = isOutgoing ? call.receiverName : call.callerName;
+            const otherPartyEmail = isOutgoing ? call.receiverEmail : call.callerEmail;
+            const otherPartyId = isOutgoing ? call.receiverId : call.callerId;
+            
+            // Format timestamp
+            const callDate = new Date(call.timestamp);
+            const today = new Date();
+            const isToday = callDate.toDateString() === today.toDateString();
+            const timeStr = callDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = isToday ? timeStr : callDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + timeStr;
+            
+            // Format duration
+            const durationStr = call.duration > 0 ? formatDuration(call.duration) : '';
+            
+            // Call icon and color
+            let iconClass, iconColor;
+            if (isMissed) {
+                iconClass = 'fa-phone-missed';
+                iconColor = '#f44336';
+            } else if (isRejected) {
+                iconClass = 'fa-phone-slash';
+                iconColor = '#f44336';
+            } else if (isOutgoing) {
+                iconClass = 'fa-phone-arrow-up-right';
+                iconColor = '#25d366';
+            } else {
+                iconClass = 'fa-phone-arrow-down-left';
+                iconColor = '#25d366';
+            }
+            
+            const initial = (otherPartyName || 'U').charAt(0).toUpperCase();
+            
+            return `
+                <div class="chat-item call-item" data-user-id="${otherPartyId}" data-user-email="${otherPartyEmail}" data-user-name="${otherPartyName || 'Unknown'}">
+                    <div class="chat-avatar">${initial}</div>
+                    <div class="chat-info">
+                        <div class="chat-header">
+                            <div class="chat-name" style="${isMissed || isRejected ? 'color: #f44336;' : ''}">${otherPartyName || otherPartyEmail || 'Unknown'}</div>
+                            <div class="chat-time">${dateStr}</div>
+                        </div>
+                        <div class="chat-preview" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fas ${iconClass}" style="color: ${iconColor}; font-size: 12px;"></i>
+                            <span>${isOutgoing ? 'Outgoing' : 'Incoming'}${durationStr ? ' · ' + durationStr : ''}${isMissed ? ' · Missed' : ''}${isRejected ? ' · Declined' : ''}</span>
+                        </div>
+                    </div>
+                    <div class="call-action" style="padding: 10px; cursor: pointer;">
+                        <i class="fas fa-phone" style="color: #25d366; font-size: 18px;"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click listeners to call items
+        document.querySelectorAll('.call-item').forEach(item => {
+            // Call back button
+            item.querySelector('.call-action').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const userId = item.dataset.userId;
+                const userEmail = item.dataset.userEmail;
+                const userName = item.dataset.userName;
+                initiateCallFromHistory(userId, userEmail, userName);
+            });
+        });
+    }
+    
+    function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins > 0) {
+            return `${mins}m ${secs}s`;
+        }
+        return `${secs}s`;
+    }
+    
+    function initiateCallFromHistory(userId, userEmail, userName) {
+        if (!userId) {
+            showToast('Cannot call - user not found', 'error');
+            return;
+        }
+        
+        console.log('📞 Calling from history:', userName, userEmail);
+        window.currentCallRecipient = userId;
+        window.currentCallContactName = userName || userEmail;
+        window.currentCallContactEmail = userEmail;
+        
+        // Start the call
+        showCallStatus('Calling...');
+        currentCallStartTime = Date.now();
+        
+        socket.emit('call-user', {
+            fromUserId: currentUserId,
+            toUserId: userId,
+            callerName: currentUserName
+        });
     }
     
     // ==================== DISPLAY CONTACTS ====================
@@ -1607,6 +1828,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Store the contact we're calling
                     window.currentCallRecipient = contact.contactUserId;
                     window.currentCallContactName = contact.customName;
+                    window.currentCallContactEmail = contact.contactEmail;
                     
                     // Also emit call-user via socket for real-time connection
                     if (socket && socket.connected) {
@@ -1631,7 +1853,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Search functionality
     searchInput.addEventListener('input', (e) => {
-        displayContacts(e.target.value);
+        const activeNav = document.querySelector('.nav-item.active');
+        const isCallsTab = activeNav && activeNav.id === 'callsNav';
+        if (isCallsTab) {
+            // Filter calls (for now just reload)
+            displayCallHistory();
+        } else {
+            displayContacts(e.target.value);
+        }
+    });
+    
+    // ==================== NAVIGATION TABS ====================
+    const chatsNav = document.getElementById('chatsNav');
+    const callsNav = document.getElementById('callsNav');
+    const headerTitle = document.querySelector('.header-title');
+    
+    chatsNav.addEventListener('click', () => {
+        // Update active state
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        chatsNav.classList.add('active');
+        
+        // Update header
+        headerTitle.textContent = 'Chats';
+        
+        // Show contacts
+        displayContacts(searchInput.value);
+        
+        // Show FAB
+        newChatBtn.style.display = 'flex';
+    });
+    
+    callsNav.addEventListener('click', () => {
+        // Update active state
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        callsNav.classList.add('active');
+        
+        // Update header
+        headerTitle.textContent = 'Calls';
+        
+        // Load and show call history
+        loadCallHistory();
+        
+        // Hide FAB on calls tab
+        newChatBtn.style.display = 'none';
     });
     
     // ==================== SETTINGS / LOGOUT ====================
@@ -1740,6 +2004,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast('Call connected!', 'success');
+        
+        // Set call start time when accepted
+        currentCallStartTime = Date.now();
+        
         // Start WebRTC connection when call is accepted
         // Use the stored recipient ID since we initiated the call
         const recipientId = window.currentCallRecipient || data.acceptedByUserId;
@@ -1753,6 +2021,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast(`Call declined: ${data.reason || 'User busy'}`, 'error');
+        
+        // Save rejected call to history
+        saveCallToHistory({
+            callerId: currentUserId,
+            callerEmail: currentUserEmail,
+            callerName: currentUserName,
+            receiverId: window.currentCallRecipient || data.rejectedBy,
+            receiverEmail: window.currentCallContactEmail || '',
+            receiverName: window.currentCallContactName || 'Unknown',
+            type: 'outgoing',
+            status: 'rejected',
+            duration: 0
+        });
+        
+        window.currentCallRecipient = null;
+        window.currentCallContactName = null;
+        window.currentCallContactEmail = null;
     });
 
     // ===== WebRTC Signaling Events =====
@@ -1773,6 +2058,27 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     socket.on('call-ended', function(data) {
         console.log('🔴 Call ended by:', data.endedBy);
+        
+        // Calculate call duration if we were in a call
+        if (currentCallStartTime) {
+            const callDuration = Math.floor((Date.now() - currentCallStartTime) / 1000);
+            
+            // Save call to history (for the receiver)
+            saveCallToHistory({
+                callerId: data.endedBy,
+                callerEmail: window.currentCallContactEmail || '',
+                callerName: remoteUserName || 'Unknown',
+                receiverId: currentUserId,
+                receiverEmail: currentUserEmail,
+                receiverName: currentUserName,
+                type: 'incoming',
+                status: 'completed',
+                duration: callDuration
+            });
+            
+            currentCallStartTime = null;
+        }
+        
         endWebRTCCall();
         showToast('Call ended', 'info');
     });

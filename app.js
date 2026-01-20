@@ -182,6 +182,50 @@ console.log('✅ Firebase Admin initialized');
         default: Date.now
       }
     }],
+    calls: [{
+      callerId: {
+        type: String,
+        required: true
+      },
+      callerEmail: {
+        type: String,
+        required: true
+      },
+      callerName: {
+        type: String,
+        default: 'Unknown'
+      },
+      receiverId: {
+        type: String,
+        required: true
+      },
+      receiverEmail: {
+        type: String,
+        required: true
+      },
+      receiverName: {
+        type: String,
+        default: 'Unknown'
+      },
+      type: {
+        type: String,
+        enum: ['outgoing', 'incoming', 'missed'],
+        required: true
+      },
+      status: {
+        type: String,
+        enum: ['completed', 'missed', 'rejected'],
+        default: 'completed'
+      },
+      duration: {
+        type: Number,
+        default: 0
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      }
+    }],
     createdAt: {
       type: Date,
       default: Date.now
@@ -934,6 +978,133 @@ app.post('/register-fcm-token', async function(req, res) {
 
     } catch (error) {
       console.error('Update contact error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // ===== CALL HISTORY MANAGEMENT =====
+  
+  // Get call history for current user
+  app.get('/calls', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Sort calls by timestamp descending (most recent first)
+      const sortedCalls = (user.calls || []).sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+      );
+
+      return res.status(200).json({
+        success: true,
+        calls: sortedCalls
+      });
+
+    } catch (error) {
+      console.error('Get call history error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // Save a call to history
+  app.post('/calls/save', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const { 
+        callerId, callerEmail, callerName,
+        receiverId, receiverEmail, receiverName,
+        type, status, duration 
+      } = req.body;
+
+      if (!callerId || !receiverId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Caller and receiver IDs are required'
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      const callRecord = {
+        callerId,
+        callerEmail: callerEmail || '',
+        callerName: callerName || 'Unknown',
+        receiverId,
+        receiverEmail: receiverEmail || '',
+        receiverName: receiverName || 'Unknown',
+        type: type || 'outgoing',
+        status: status || 'completed',
+        duration: duration || 0,
+        timestamp: new Date()
+      };
+
+      user.calls.push(callRecord);
+      
+      // Keep only last 100 calls to prevent unbounded growth
+      if (user.calls.length > 100) {
+        user.calls = user.calls.slice(-100);
+      }
+      
+      await user.save();
+
+      console.log(`📞 Call saved for user ${decoded.id}: ${type} call with ${type === 'outgoing' ? receiverEmail : callerEmail}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Call saved to history',
+        call: callRecord
+      });
+
+    } catch (error) {
+      console.error('Save call error:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error'
