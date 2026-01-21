@@ -835,7 +835,7 @@ app.post('/register-fcm-token', async function(req, res) {
         });
       }
 
-      // Add contact
+      // Add contact to current user's contacts
       const newContact = {
         contactUserId: contactUser._id.toString(),
         contactEmail: cleanEmail,
@@ -847,6 +847,23 @@ app.post('/register-fcm-token', async function(req, res) {
       await user.save();
 
       console.log(`✅ Contact added: ${cleanName} (${cleanEmail}) for user ${decoded.id}`);
+
+      // Automatically add the current user to the contact's contacts list (bidirectional)
+      const reverseContactExists = contactUser.contacts.find(c => c.contactEmail === decoded.email);
+      
+      if (!reverseContactExists) {
+        const reverseContact = {
+          contactUserId: decoded.id,
+          contactEmail: decoded.email,
+          customName: user.fullName, // Use the actual full name
+          addedAt: new Date()
+        };
+        
+        contactUser.contacts.push(reverseContact);
+        await contactUser.save();
+        
+        console.log(`✅ Bidirectional contact added: ${user.fullName} (${decoded.email}) for user ${contactUser._id}`);
+      }
 
       return res.status(200).json({
         success: true,
