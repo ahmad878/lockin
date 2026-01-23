@@ -1944,6 +1944,29 @@ app.post('/register-fcm-token', async function(req, res) {
       }
     });
 
+    // ===== Typing Indicator Handlers =====
+    socket.on("typing", (data) => {
+      const { fromUserId, toUserId } = data;
+      const recipientSocketId = userSocketMap.get(toUserId);
+      
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("user-typing", {
+          fromUserId: fromUserId
+        });
+      }
+    });
+
+    socket.on("stop-typing", (data) => {
+      const { fromUserId, toUserId } = data;
+      const recipientSocketId = userSocketMap.get(toUserId);
+      
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("user-stop-typing", {
+          fromUserId: fromUserId
+        });
+      }
+    });
+
     // ===== Disconnect Handler =====
     socket.on("disconnect", () => {
       // Remove user from map

@@ -2155,6 +2155,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                 gap: 4px;
                 width: 100%;
             }
+            .typing-indicator {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 12px 16px;
+                background: #1f2c33;
+                border-radius: 8px;
+                width: fit-content;
+                margin: 4px 0;
+            }
+            .typing-indicator span {
+                width: 8px;
+                height: 8px;
+                background: #8696a0;
+                border-radius: 50%;
+                animation: typingBounce 1.4s infinite ease-in-out;
+            }
+            .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+            .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+            .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+            @keyframes typingBounce {
+                0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+                30% { transform: translateY(-6px); opacity: 1; }
+            }
         `;
         document.head.appendChild(style);
         
@@ -2184,9 +2208,58 @@ document.addEventListener('DOMContentLoaded', async function() {
         const sendBtn = chatView.querySelector('#sendMessageBtn');
         const messageInput = chatView.querySelector('#chatMessageInput');
         
-        sendBtn.addEventListener('click', () => sendChatMessage(contact, messageInput));
+        // Typing indicator logic
+        let typingTimeout = null;
+        let isTyping = false;
+        
+        messageInput.addEventListener('input', () => {
+            // Start typing indicator
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing', {
+                    fromUserId: currentUserId,
+                    toUserId: contact.contactUserId
+                });
+            }
+            
+            // Clear existing timeout
+            if (typingTimeout) clearTimeout(typingTimeout);
+            
+            // Stop typing after 2.5 seconds of inactivity
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                socket.emit('stop-typing', {
+                    fromUserId: currentUserId,
+                    toUserId: contact.contactUserId
+                });
+            }, 2500);
+        });
+        
+        sendBtn.addEventListener('click', () => {
+            // Stop typing indicator when message is sent
+            if (typingTimeout) clearTimeout(typingTimeout);
+            if (isTyping) {
+                isTyping = false;
+                socket.emit('stop-typing', {
+                    fromUserId: currentUserId,
+                    toUserId: contact.contactUserId
+                });
+            }
+            sendChatMessage(contact, messageInput);
+        });
         messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendChatMessage(contact, messageInput);
+            if (e.key === 'Enter') {
+                // Stop typing indicator when message is sent
+                if (typingTimeout) clearTimeout(typingTimeout);
+                if (isTyping) {
+                    isTyping = false;
+                    socket.emit('stop-typing', {
+                        fromUserId: currentUserId,
+                        toUserId: contact.contactUserId
+                    });
+                }
+                sendChatMessage(contact, messageInput);
+            }
         });
         
         // Call button
@@ -2306,6 +2379,34 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
         messagesDiv.appendChild(bubble);
         container.scrollTop = container.scrollHeight;
+    }
+    
+    // ==================== TYPING INDICATOR UI ====================
+    function showTypingIndicator() {
+        let container = document.getElementById('chatMessagesContainer');
+        if (!container) return;
+        
+        // Remove existing typing indicator if any
+        hideTypingIndicator();
+        
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'typing-indicator';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+            <span></span>
+            <span></span>
+            <span></span>
+        `;
+        
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    function hideTypingIndicator() {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
     }
     
     function formatMessageTime(timestamp) {
@@ -2553,6 +2654,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     socket.on('new-message', function(data) {
         console.log('📨 New message received:', data);
         
+        // Hide typing indicator when message is received
+        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
+            hideTypingIndicator();
+        }
+        
         // Only show if we're currently in a chat with this person
         if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
             addMessageToUI({
@@ -2565,6 +2671,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             showToast(`New message from ${data.fromName}`, 'info');
             // Refresh the contacts/chats list so new messages appear
             loadContacts();
+        }
+    });
+    
+    // ===== Typing Indicator Events =====
+    socket.on('user-typing', function(data) {
+        console.log('⌨️ User typing:', data.fromUserId);
+        // Only show if we're currently in a chat with this person
+        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
+            showTypingIndicator();
+        }
+    });
+    
+    socket.on('user-stop-typing', function(data) {
+        console.log('⌨️ User stopped typing:', data.fromUserId);
+        // Only hide if we're currently in a chat with this person
+        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
+            hideTypingIndicator();
         }
     });
 
