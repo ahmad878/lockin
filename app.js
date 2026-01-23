@@ -234,6 +234,92 @@ console.log('✅ Firebase Admin initialized');
 
   const User = mongoose.model("User", userSchema);
 
+  // ===== MongoDB Schema for Chats =====
+  const chatSchema = new mongoose.Schema({
+    person1: {
+      userId: {
+        type: String,
+        required: true
+      },
+      email: {
+        type: String,
+        required: true
+      },
+      name: {
+        type: String,
+        required: true
+      }
+    },
+    person2: {
+      userId: {
+        type: String,
+        required: true
+      },
+      email: {
+        type: String,
+        required: true
+      },
+      name: {
+        type: String,
+        required: true
+      }
+    },
+    messages: [{
+      senderId: {
+        type: String,
+        required: true
+      },
+      receiverId: {
+        type: String,
+        required: true
+      },
+      message: {
+        type: String,
+        required: true
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      read: {
+        type: Boolean,
+        default: false
+      },
+      delivered: {
+        type: Boolean,
+        default: false
+      }
+    }],
+    lastMessage: {
+      message: {
+        type: String,
+        default: ''
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      senderId: {
+        type: String,
+        default: ''
+      }
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  });
+
+  // Index for efficient querying
+  chatSchema.index({ 'person1.userId': 1, 'person2.userId': 1 });
+  chatSchema.index({ updatedAt: -1 });
+
+  const Chat = mongoose.model("Chat", chatSchema);
+
   // ===== Verification & Security Constants =====
   const verificationCodes = new Map();
   const VERIFICATION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
@@ -1002,6 +1088,68 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
+  // ===== CHAT MANAGEMENT =====
+  
+  // Get chat messages with a specific contact
+  app.get('/chat/:contactEmail', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const contactEmail = req.params.contactEmail.trim().toLowerCase();
+      
+      // Find the contact user
+      const contactUser = await User.findOne({ email: contactEmail });
+      if (!contactUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'Contact not found'
+        });
+      }
+
+      // Find chat between current user and contact (either direction)
+      const chat = await Chat.findOne({
+        $or: [
+          { 'person1.userId': decoded.id, 'person2.userId': contactUser._id.toString() },
+          { 'person1.userId': contactUser._id.toString(), 'person2.userId': decoded.id }
+        ]
+      });
+
+      if (!chat) {
+        return res.status(200).json({
+          success: true,
+          chat: null,
+          message: 'No chat history'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        chat: chat
+      });
+
+    } catch (error) {
+      console.error('Get chat error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
   // ===== CALL HISTORY MANAGEMENT =====
   
   // Get call history for current user
@@ -1536,6 +1684,88 @@ app.post('/register-fcm-token', async function(req, res) {
           candidate,
           fromUserId
         });
+      }
+    });
+
+    // ===== Chat Message Handler =====
+    socket.on("chat", async (data) => {
+      try {
+        console.log('💬 Chat message received:', data);
+        
+        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, timestamp } = data;
+        
+        if (!fromUserId || !toUserId || !message) {
+          console.error('Invalid chat data');
+          return;
+        }
+        
+        // Check if chat already exists between these two users
+        // Chat can be in either direction: person1->person2 or person2->person1
+        let existingChat = await Chat.findOne({
+          $or: [
+            { 'person1.userId': fromUserId, 'person2.userId': toUserId },
+            { 'person1.userId': toUserId, 'person2.userId': fromUserId }
+          ]
+        });
+        
+        const newMessage = {
+          senderId: fromUserId,
+          receiverId: toUserId,
+          message: message,
+          timestamp: timestamp || new Date(),
+          read: false,
+          delivered: false
+        };
+        
+        if (existingChat) {
+          // Add message to existing chat
+          existingChat.messages.push(newMessage);
+          existingChat.lastMessage = {
+            message: message,
+            timestamp: newMessage.timestamp,
+            senderId: fromUserId
+          };
+          existingChat.updatedAt = new Date();
+          await existingChat.save();
+          console.log('✅ Message added to existing chat');
+        } else {
+          // Create new chat
+          const newChat = new Chat({
+            person1: {
+              userId: fromUserId,
+              email: fromEmail,
+              name: fromName
+            },
+            person2: {
+              userId: toUserId,
+              email: toEmail,
+              name: toName
+            },
+            messages: [newMessage],
+            lastMessage: {
+              message: message,
+              timestamp: newMessage.timestamp,
+              senderId: fromUserId
+            }
+          });
+          await newChat.save();
+          console.log('✅ New chat created');
+        }
+        
+        // Send message to recipient if they're online
+        const recipientSocketId = userSocketMap.get(toUserId);
+        if (recipientSocketId) {
+          io.to(recipientSocketId).emit('new-message', {
+            fromUserId: fromUserId,
+            fromName: fromName,
+            message: message,
+            timestamp: newMessage.timestamp
+          });
+          console.log('📨 Message sent to recipient socket');
+        }
+        
+      } catch (error) {
+        console.error('❌ Chat message error:', error);
       }
     });
 
