@@ -1778,12 +1778,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // First, add all contacts
         userContacts.forEach(contact => {
-            // Find chat with this contact (if any)
-            const chat = userChats.find(c => c.otherEmail === contact.contactEmail);
+            // Find chat with this contact (if any) - use case-insensitive comparison
+            const contactEmailLower = contact.contactEmail.toLowerCase();
+            const chat = userChats.find(c => c.otherEmail.toLowerCase() === contactEmailLower);
             
             displayList.push({
                 userId: contact.contactUserId,
-                email: contact.contactEmail,
+                email: contact.contactEmail.toLowerCase(), // Normalize to lowercase
                 displayName: contact.customName,
                 actualName: contact.customName,
                 isContact: true,
@@ -1794,14 +1795,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Add chats from non-contacts (people who messaged us but aren't in our contacts)
         userChats.forEach(chat => {
-            // Check if this person is already in our display list (as a contact)
-            const existsAsContact = displayList.find(d => d.email === chat.otherEmail);
+            // Check if this person is already in our display list (as a contact) - case-insensitive
+            const chatEmailLower = chat.otherEmail.toLowerCase();
+            const existsAsContact = displayList.find(d => d.email.toLowerCase() === chatEmailLower);
             
             if (!existsAsContact) {
                 // This is a chat from someone not in our contacts
                 displayList.push({
                     userId: chat.otherUserId,
-                    email: chat.otherEmail,
+                    email: chat.otherEmail.toLowerCase(), // Normalize to lowercase
                     displayName: chat.otherName, // Use their actual name
                     actualName: chat.otherName,
                     isContact: false,

@@ -1185,7 +1185,7 @@ app.post('/register-fcm-token', async function(req, res) {
         return {
           chatId: chat._id,
           otherUserId: otherPerson.userId,
-          otherEmail: otherPerson.email,
+          otherEmail: (otherPerson.email || '').toLowerCase(), // Normalize to lowercase
           otherName: otherPerson.name,
           lastMessage: chat.lastMessage,
           updatedAt: chat.updatedAt,
@@ -1786,16 +1786,16 @@ app.post('/register-fcm-token', async function(req, res) {
           await existingChat.save();
           console.log('✅ Message added to existing chat');
         } else {
-          // Create new chat
+          // Create new chat - normalize emails to lowercase
           const newChat = new Chat({
             person1: {
               userId: fromUserId,
-              email: fromEmail,
+              email: (fromEmail || '').toLowerCase(),
               name: fromName
             },
             person2: {
               userId: toUserId,
-              email: toEmail,
+              email: (toEmail || '').toLowerCase(),
               name: toName
             },
             messages: [newMessage],
