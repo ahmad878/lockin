@@ -189,7 +189,7 @@ console.log('✅ Firebase Admin initialized');
       },
       callerEmail: {
         type: String,
-        required: true
+        default: ''
       },
       callerName: {
         type: String,
@@ -201,7 +201,7 @@ console.log('✅ Firebase Admin initialized');
       },
       receiverEmail: {
         type: String,
-        required: true
+        default: ''
       },
       receiverName: {
         type: String,
