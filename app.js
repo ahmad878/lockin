@@ -934,23 +934,6 @@ app.post('/register-fcm-token', async function(req, res) {
 
       console.log(`✅ Contact added: ${cleanName} (${cleanEmail}) for user ${decoded.id}`);
 
-      // Automatically add the current user to the contact's contacts list (bidirectional)
-      const reverseContactExists = contactUser.contacts.find(c => c.contactEmail === decoded.email);
-      
-      if (!reverseContactExists) {
-        const reverseContact = {
-          contactUserId: decoded.id,
-          contactEmail: decoded.email,
-          customName: user.fullName, // Use the actual full name
-          addedAt: new Date()
-        };
-        
-        contactUser.contacts.push(reverseContact);
-        await contactUser.save();
-        
-        console.log(`✅ Bidirectional contact added: ${user.fullName} (${decoded.email}) for user ${contactUser._id}`);
-      }
-
       return res.status(200).json({
         success: true,
         message: 'Contact added successfully',
@@ -1384,11 +1367,15 @@ app.post('/register-fcm-token', async function(req, res) {
     const targetUserId = targetUser._id.toString();
     const recipientSocketId = userSocketMap.get(targetUserId);
 
+    // Check if caller is in the receiver's contacts to get their custom name
+    const callerInReceiverContacts = targetUser.contacts.find(c => c.contactUserId === fromUserId || c.contactEmail === caller.email);
+    const displayName = callerInReceiverContacts ? callerInReceiverContacts.customName : (fromName || 'Someone');
+
     // Try Socket.IO first (if user is online)
     if (recipientSocketId) {
       io.to(recipientSocketId).emit('incoming-call', {
         fromUserId: fromUserId,
-        callerName: fromName || 'Someone',
+        callerName: displayName,
         callId: `${fromUserId}-${Date.now()}`,
         timestamp: new Date().toISOString()
       });
@@ -1417,7 +1404,7 @@ app.post('/register-fcm-token', async function(req, res) {
       const message = {
         data: {
           fromUserId: fromUserId,
-          callerName: fromName || 'Someone',
+          callerName: displayName,
           callerEmail: caller ? caller.email : '',
           callId: `${fromUserId}-${Date.now()}`,
           type: 'incoming-call',
@@ -1630,7 +1617,7 @@ app.post('/register-fcm-token', async function(req, res) {
     });
 
     // ===== Incoming Call Handler =====
-    socket.on("call-user", (callData) => {
+    socket.on("call-user", async (callData) => {
       const { fromUserId, toUserId, callerName } = callData;
       const recipientSocketId = userSocketMap.get(toUserId);
 
@@ -1638,10 +1625,25 @@ app.post('/register-fcm-token', async function(req, res) {
       console.log(`🔍 Recipient socket: ${recipientSocketId}`);
 
       if (recipientSocketId) {
+        // Look up caller in recipient's contacts to get custom name
+        let displayName = callerName;
+        try {
+          const recipient = await User.findById(toUserId);
+          const caller = await User.findById(fromUserId);
+          if (recipient && caller) {
+            const callerInContacts = recipient.contacts.find(c => c.contactUserId === fromUserId || c.contactEmail === caller.email);
+            if (callerInContacts) {
+              displayName = callerInContacts.customName;
+            }
+          }
+        } catch (err) {
+          console.error('Error looking up contact name:', err);
+        }
+
         // Send incoming call ONLY to the recipient
         io.to(recipientSocketId).emit("incoming-call", {
           fromUserId: fromUserId,
-          fromName: callerName,
+          fromName: displayName,
           callId: `${fromUserId}-${Date.now()}`,
           timestamp: new Date().toISOString()
         });
