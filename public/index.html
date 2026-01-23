@@ -526,6 +526,7 @@ let ringtoneOscillator = null;
 let isRingtonePlaying = false;
 let userContacts = [];
 let userCalls = [];
+let userChats = []; // Store all chats including from non-contacts
 let selectedContact = null;
 let currentCallStartTime = null;
 
@@ -1487,24 +1488,148 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     
-    // ==================== LOAD CONTACTS ====================
+    // ==================== ADD CONTACT MODAL (with pre-filled email) ====================
+    function showAddContactModalForEmail(email, suggestedName) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">Add Contact</div>
+                <input 
+                    type="email" 
+                    class="modal-input" 
+                    id="modalEmailInput" 
+                    placeholder="Enter email address"
+                    value="${email}"
+                    readonly
+                    style="background: #0a0f12; color: #8696a0;"
+                >
+                <input 
+                    type="text" 
+                    class="modal-input" 
+                    id="modalNameInput" 
+                    placeholder="Enter contact name"
+                    value="${suggestedName || ''}"
+                    autofocus
+                >
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-cancel" id="modalCancelBtn">Cancel</button>
+                    <button class="modal-btn modal-btn-primary" id="modalAddBtn">Add Contact</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const nameInput = document.getElementById('modalNameInput');
+        const cancelBtn = document.getElementById('modalCancelBtn');
+        const addBtn = document.getElementById('modalAddBtn');
+        
+        nameInput.focus();
+        nameInput.select();
+        
+        function closeModal() {
+            modal.remove();
+        }
+        
+        cancelBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        
+        addBtn.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showToast('Please enter a contact name', 'error');
+                return;
+            }
+            
+            addBtn.disabled = true;
+            addBtn.textContent = 'Adding...';
+            
+            try {
+                const response = await fetch('https://lockin-production.up.railway.app/contacts/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contactEmail: email,
+                        customName: name
+                    }),
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Contact added successfully!', 'success');
+                    closeModal();
+                    // Reload contacts and chats
+                    await loadContacts();
+                    // If we're in a chat view, update the add contact button
+                    const addContactBtn = document.getElementById('chatAddContactBtn');
+                    if (addContactBtn) {
+                        addContactBtn.style.display = 'none';
+                    }
+                    // Update the contact display in chat header if in chat
+                    if (selectedContact && selectedContact.contactEmail === email) {
+                        selectedContact.customName = name;
+                        selectedContact.isContact = true;
+                    }
+                } else {
+                    showToast(result.message || 'Failed to add contact', 'error');
+                    addBtn.disabled = false;
+                    addBtn.textContent = 'Add Contact';
+                }
+            } catch (error) {
+                console.error('Error adding contact:', error);
+                showToast('Network error', 'error');
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add Contact';
+            }
+        });
+        
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addBtn.click();
+        });
+    }
+    
+    // ==================== LOAD CONTACTS AND CHATS ====================
     async function loadContacts() {
         try {
-            const response = await fetch('https://lockin-production.up.railway.app/contacts', {
+            // Load contacts
+            const contactsResponse = await fetch('https://lockin-production.up.railway.app/contacts', {
                 method: 'GET',
                 credentials: 'include'
             });
             
-            const result = await response.json();
+            const contactsResult = await contactsResponse.json();
             
-            if (response.ok) {
-                userContacts = result.contacts || [];
-                displayContacts();
+            if (contactsResponse.ok) {
+                userContacts = contactsResult.contacts || [];
             } else {
-                console.error('Failed to load contacts:', result.message);
+                console.error('Failed to load contacts:', contactsResult.message);
+                userContacts = [];
             }
+            
+            // Load all chats (including from non-contacts)
+            const chatsResponse = await fetch('https://lockin-production.up.railway.app/chats', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            const chatsResult = await chatsResponse.json();
+            
+            if (chatsResponse.ok) {
+                userChats = chatsResult.chats || [];
+            } else {
+                console.error('Failed to load chats:', chatsResult.message);
+                userChats = [];
+            }
+            
+            displayContacts();
         } catch (error) {
-            console.error('Error loading contacts:', error);
+            console.error('Error loading contacts/chats:', error);
         }
     }
     
@@ -1644,12 +1769,59 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     
-    // ==================== DISPLAY CONTACTS ====================
+    // ==================== DISPLAY CONTACTS/CHATS ====================
     function displayContacts(filterText = '') {
         const lowerFilter = filterText.toLowerCase();
-        const filtered = userContacts.filter(contact => 
-            contact.customName.toLowerCase().includes(lowerFilter) ||
-            contact.contactEmail.toLowerCase().includes(lowerFilter)
+        
+        // Build a combined list: contacts with their chat info + chats from non-contacts
+        let displayList = [];
+        
+        // First, add all contacts
+        userContacts.forEach(contact => {
+            // Find chat with this contact (if any)
+            const chat = userChats.find(c => c.otherEmail === contact.contactEmail);
+            
+            displayList.push({
+                userId: contact.contactUserId,
+                email: contact.contactEmail,
+                displayName: contact.customName,
+                actualName: contact.customName,
+                isContact: true,
+                lastMessage: chat ? chat.lastMessage : null,
+                updatedAt: chat ? chat.updatedAt : contact.addedAt
+            });
+        });
+        
+        // Add chats from non-contacts (people who messaged us but aren't in our contacts)
+        userChats.forEach(chat => {
+            // Check if this person is already in our display list (as a contact)
+            const existsAsContact = displayList.find(d => d.email === chat.otherEmail);
+            
+            if (!existsAsContact) {
+                // This is a chat from someone not in our contacts
+                displayList.push({
+                    userId: chat.otherUserId,
+                    email: chat.otherEmail,
+                    displayName: chat.otherName, // Use their actual name
+                    actualName: chat.otherName,
+                    isContact: false,
+                    lastMessage: chat.lastMessage,
+                    updatedAt: chat.updatedAt
+                });
+            }
+        });
+        
+        // Sort by most recent activity (last message or added date)
+        displayList.sort((a, b) => {
+            const dateA = a.lastMessage ? new Date(a.lastMessage.timestamp) : new Date(a.updatedAt);
+            const dateB = b.lastMessage ? new Date(b.lastMessage.timestamp) : new Date(b.updatedAt);
+            return dateB - dateA;
+        });
+        
+        // Apply filter
+        const filtered = displayList.filter(item => 
+            item.displayName.toLowerCase().includes(lowerFilter) ||
+            item.email.toLowerCase().includes(lowerFilter)
         );
         
         if (filtered.length === 0) {
@@ -1663,34 +1835,75 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        chatsList.innerHTML = filtered.map(contact => {
-            const initial = contact.customName.charAt(0).toUpperCase();
+        chatsList.innerHTML = filtered.map(item => {
+            const initial = item.displayName.charAt(0).toUpperCase();
+            const lastMsgPreview = item.lastMessage ? item.lastMessage.message : item.email;
+            const lastMsgTime = item.lastMessage ? formatChatTime(item.lastMessage.timestamp) : '';
+            const isFromMe = item.lastMessage && item.lastMessage.senderId === currentUserId;
+            
             return `
-                <div class="chat-item" data-contact-email="${contact.contactEmail}">
+                <div class="chat-item" data-contact-email="${item.email}" data-contact-user-id="${item.userId}" data-is-contact="${item.isContact}" data-actual-name="${item.actualName}">
                     <div class="chat-avatar">${initial}</div>
                     <div class="chat-info">
                         <div class="chat-header">
-                            <div class="chat-name">${contact.customName}</div>
+                            <div class="chat-name">${item.displayName}${!item.isContact ? ' <span style="font-size: 10px; color: #8696a0; font-weight: normal;">(not in contacts)</span>' : ''}</div>
+                            ${lastMsgTime ? `<div class="chat-time">${lastMsgTime}</div>` : ''}
                         </div>
-                        <div class="chat-preview">${contact.contactEmail}</div>
+                        <div class="chat-preview">${isFromMe ? '<i class="fas fa-check-double" style="color: #53bdeb; margin-right: 4px; font-size: 12px;"></i>' : ''}${truncateText(lastMsgPreview, 35)}</div>
                     </div>
                 </div>
             `;
         }).join('');
         
-        // Add click listeners to contacts
+        // Add click listeners to chat items
         document.querySelectorAll('.chat-item').forEach(item => {
             item.addEventListener('click', () => {
                 const email = item.dataset.contactEmail;
-                const contact = userContacts.find(c => c.contactEmail === email);
-                openContactChat(contact);
+                const userId = item.dataset.contactUserId;
+                const isContact = item.dataset.isContact === 'true';
+                const actualName = item.dataset.actualName;
+                
+                // Build contact object
+                const contactObj = {
+                    contactUserId: userId,
+                    contactEmail: email,
+                    customName: actualName,
+                    isContact: isContact
+                };
+                
+                openContactChat(contactObj);
             });
         });
+    }
+    
+    function formatChatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+        
+        if (isToday) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (isYesterday) {
+            return 'Yesterday';
+        } else {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+    }
+    
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
     }
     
     // ==================== OPEN CONTACT CHAT ====================
     function openContactChat(contact) {
         selectedContact = contact;
+        const isContact = contact.isContact !== false; // Default to true if not specified
         
         // Create chat view
         const chatView = document.createElement('div');
@@ -1712,7 +1925,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <i class="fas fa-ellipsis-v" style="color: #8696a0; font-size: 20px; cursor: pointer;"></i>
                 </div>
             </div>
-            <div class="chat-messages" id="chatMessagesContainer">
+            ${!isContact ? `
+            <div class="add-contact-banner" id="chatAddContactBtn" style="
+                background: linear-gradient(135deg, #1a3a4a 0%, #1f2c33 100%);
+                padding: 12px 16px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                border-bottom: 1px solid #2a3942;
+            ">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-user-plus" style="color: #25d366; font-size: 16px;"></i>
+                    <span style="color: #e9edef; font-size: 14px;">${contact.customName} is not in your contacts</span>
+                </div>
+                <button id="addContactBtnInChat" style="
+                    background: #25d366;
+                    color: #0b141a;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                ">Add</button>
+            </div>
+            ` : ''}
+            <div class="chat-messages empty" id="chatMessagesContainer">
                 <div class="empty-state">
                     <i class="fas fa-comments"></i>
                     <h3>No messages yet</h3>
@@ -1758,11 +1997,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             .call-btn:hover {
                 color: #20bd5a;
             }
+            #addContactBtnInChat:hover {
+                background: #20bd5a !important;
+            }
             .chat-messages {
                 flex: 1;
                 overflow-y: auto;
                 padding: 20px;
                 display: flex;
+                flex-direction: column;
+            }
+            .chat-messages.empty {
                 align-items: center;
                 justify-content: center;
             }
@@ -1781,6 +2026,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 padding: 10px 16px;
                 color: #e9edef;
                 font-size: 15px;
+                outline: none;
+            }
+            .chat-input-bar input::placeholder {
+                color: #667781;
+            }
+            .chat-input-bar input:focus {
+                box-shadow: 0 0 0 1px #25d366;
             }
             .chat-input-bar button {
                 width: 42px;
@@ -1832,7 +2084,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             chatView.remove();
             style.remove();
             selectedContact = null;
+            // Reload contacts to refresh the list
+            loadContacts();
         });
+        
+        // Add Contact button (if shown)
+        const addContactBtnInChat = chatView.querySelector('#addContactBtnInChat');
+        if (addContactBtnInChat) {
+            addContactBtnInChat.addEventListener('click', () => {
+                showAddContactModalForEmail(contact.contactEmail, contact.customName);
+            });
+        }
         
         // Load existing messages for this chat
         loadChatMessages(contact);
@@ -1913,6 +2175,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
         
+        // Remove 'empty' class for proper alignment
+        container.classList.remove('empty');
+        
         const messagesDiv = document.createElement('div');
         messagesDiv.className = 'messages-container';
         messagesDiv.id = 'messagesDiv';
@@ -1940,6 +2205,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Remove empty state if it exists
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
+        
+        // Remove 'empty' class for proper alignment
+        container.classList.remove('empty');
         
         // Create messages container if it doesn't exist
         if (!messagesDiv) {
@@ -2214,6 +2482,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             // Show notification toast
             showToast(`New message from ${data.fromName}`, 'info');
+            // Refresh the contacts/chats list so new messages appear
+            loadContacts();
         }
     });
 

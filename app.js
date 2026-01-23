@@ -1150,6 +1150,63 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
+  // Get all chats for current user (including from non-contacts)
+  app.get('/chats', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      // Find all chats where user is person1 or person2
+      const chats = await Chat.find({
+        $or: [
+          { 'person1.userId': decoded.id },
+          { 'person2.userId': decoded.id }
+        ]
+      }).sort({ updatedAt: -1 });
+
+      // Transform chats to include the other person's info
+      const transformedChats = chats.map(chat => {
+        const isUserPerson1 = chat.person1.userId === decoded.id;
+        const otherPerson = isUserPerson1 ? chat.person2 : chat.person1;
+        
+        return {
+          chatId: chat._id,
+          otherUserId: otherPerson.userId,
+          otherEmail: otherPerson.email,
+          otherName: otherPerson.name,
+          lastMessage: chat.lastMessage,
+          updatedAt: chat.updatedAt,
+          messageCount: chat.messages.length
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        chats: transformedChats
+      });
+
+    } catch (error) {
+      console.error('Get all chats error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
   // ===== CALL HISTORY MANAGEMENT =====
   
   // Get call history for current user
