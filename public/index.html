@@ -526,7 +526,6 @@ let ringtoneOscillator = null;
 let isRingtonePlaying = false;
 let userContacts = [];
 let userCalls = [];
-let selectedContact = null;
 let currentCallStartTime = null;
 
 function showToast(message, type = 'info') {
@@ -1689,308 +1688,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // ==================== OPEN CONTACT CHAT ====================
-    function openContactChat(contact) {
-        selectedContact = contact;
-        
-        // Create chat view
-        const chatView = document.createElement('div');
-        chatView.className = 'chat-view';
-        chatView.innerHTML = `
-            <div class="chat-header-bar">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <i class="fas fa-arrow-left back-btn"></i>
-                    <div class="chat-avatar" style="width: 40px; height: 40px; font-size: 16px;">
-                        ${contact.customName.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <div style="color: #e9edef; font-size: 16px; font-weight: 500;">${contact.customName}</div>
-                        <div style="color: #8696a0; font-size: 13px;">${contact.contactEmail}</div>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <i class="fas fa-phone call-btn" style="color: #25d366; font-size: 20px; cursor: pointer;"></i>
-                    <i class="fas fa-ellipsis-v" style="color: #8696a0; font-size: 20px; cursor: pointer;"></i>
-                </div>
-            </div>
-            <div class="chat-messages" id="chatMessagesContainer">
-                <div class="empty-state">
-                    <i class="fas fa-comments"></i>
-                    <h3>No messages yet</h3>
-                    <p>Start a conversation!</p>
-                </div>
-            </div>
-            <div class="chat-input-bar">
-                <input type="text" placeholder="Type a message" id="chatMessageInput">
-                <button id="sendMessageBtn"><i class="fas fa-paper-plane"></i></button>
-            </div>
-        `;
-        
-        // Add styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .chat-view {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: #0b141a;
-                z-index: 1000;
-                display: flex;
-                flex-direction: column;
-            }
-            .chat-header-bar {
-                background: #1f2c33;
-                padding: 10px 16px;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            }
-            .back-btn {
-                color: #8696a0;
-                font-size: 20px;
-                cursor: pointer;
-            }
-            .back-btn:hover {
-                color: #e9edef;
-            }
-            .call-btn:hover {
-                color: #20bd5a;
-            }
-            .chat-messages {
-                flex: 1;
-                overflow-y: auto;
-                padding: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .chat-input-bar {
-                background: #1f2c33;
-                padding: 10px 16px;
-                display: flex;
-                gap: 12px;
-                align-items: center;
-            }
-            .chat-input-bar input {
-                flex: 1;
-                background: #2a3942;
-                border: none;
-                border-radius: 20px;
-                padding: 10px 16px;
-                color: #e9edef;
-                font-size: 15px;
-            }
-            .chat-input-bar button {
-                width: 42px;
-                height: 42px;
-                border-radius: 50%;
-                background: #25d366;
-                border: none;
-                color: white;
-                font-size: 16px;
-                cursor: pointer;
-            }
-            .message-bubble {
-                max-width: 65%;
-                padding: 8px 12px;
-                border-radius: 8px;
-                margin: 4px 0;
-                word-wrap: break-word;
-            }
-            .message-sent {
-                background: #005c4b;
-                color: #e9edef;
-                align-self: flex-end;
-                margin-left: auto;
-            }
-            .message-received {
-                background: #1f2c33;
-                color: #e9edef;
-                align-self: flex-start;
-            }
-            .message-time {
-                font-size: 11px;
-                color: #8696a0;
-                margin-top: 4px;
-                text-align: right;
-            }
-            .messages-container {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                width: 100%;
-            }
-        `;
-        document.head.appendChild(style);
-        
-        document.body.appendChild(chatView);
-        
-        // Back button
-        chatView.querySelector('.back-btn').addEventListener('click', () => {
-            chatView.remove();
-            style.remove();
-            selectedContact = null;
-        });
-        
-        // Load existing messages for this chat
-        loadChatMessages(contact);
-        
-        // Send message button
-        const sendBtn = chatView.querySelector('#sendMessageBtn');
-        const messageInput = chatView.querySelector('#chatMessageInput');
-        
-        sendBtn.addEventListener('click', () => sendChatMessage(contact, messageInput));
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendChatMessage(contact, messageInput);
-        });
-        
-        // Call button
-        chatView.querySelector('.call-btn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('https://lockin-production.up.railway.app/send-message-notification', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        toEmail: contact.contactEmail,
-                        fromUserId: currentUserId,
-                        fromName: currentUserName || 'Someone'
-                    }),
-                    credentials: 'include'
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showToast('Calling ' + contact.customName + '...', 'success');
-                    showCallStatus('Calling...');
-                    // Store the contact we're calling
-                    window.currentCallRecipient = contact.contactUserId;
-                    window.currentCallContactName = contact.customName;
-                    window.currentCallContactEmail = contact.contactEmail;
-                    
-                    // Also emit call-user via socket for real-time connection
-                    if (socket && socket.connected) {
-                        socket.emit('call-user', {
-                            fromUserId: currentUserId,
-                            toUserId: contact.contactUserId,
-                            callerName: currentUserName || 'Someone',
-                            callerEmail: currentUserEmail || ''
-                        });
-                        console.log('📞 Emitted call-user to:', contact.contactUserId);
-                    }
-                } else {
-                    showToast(result.message || 'Failed to call', 'error');
-                }
-            } catch (error) {
-                console.error('Error calling:', error);
-                showToast('Network error', 'error');
-            }
-        });
-    }
-    
-    // ==================== CHAT MESSAGING ====================
-    async function loadChatMessages(contact) {
+    async function openContactChat(contact) {
         try {
-            const response = await fetch(`https://lockin-production.up.railway.app/chat/${contact.contactEmail}`, {
+            showToast('Opening chat...', 'info');
+            
+            // Get or create chat ID
+            const response = await fetch('https://lockin-production.up.railway.app/chat/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contactEmail: contact.contactEmail,
+                    contactUserId: contact.contactUserId,
+                    contactName: contact.customName
+                }),
                 credentials: 'include'
             });
             
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.chat && result.chat.messages.length > 0) {
-                    displayMessages(result.chat.messages, contact);
-                }
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                // Navigate to chat page with unique ID
+                window.location.href = `/chat/${result.chatId}`;
+            } else {
+                showToast(result.message || 'Failed to open chat', 'error');
             }
         } catch (error) {
-            console.error('Error loading messages:', error);
+            console.error('Error opening chat:', error);
+            showToast('Network error', 'error');
         }
-    }
-    
-    function displayMessages(messages, contact) {
-        const container = document.getElementById('chatMessagesContainer');
-        const emptyState = container.querySelector('.empty-state');
-        if (emptyState) emptyState.remove();
-        
-        const messagesDiv = document.createElement('div');
-        messagesDiv.className = 'messages-container';
-        messagesDiv.id = 'messagesDiv';
-        
-        messages.forEach(msg => {
-            const isSent = msg.senderId === currentUserId;
-            const bubble = document.createElement('div');
-            bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
-            bubble.innerHTML = `
-                <div>${msg.message}</div>
-                <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-            `;
-            messagesDiv.appendChild(bubble);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(messagesDiv);
-        container.scrollTop = container.scrollHeight;
-    }
-    
-    function addMessageToUI(message, isSent) {
-        let container = document.getElementById('chatMessagesContainer');
-        let messagesDiv = document.getElementById('messagesDiv');
-        
-        // Remove empty state if it exists
-        const emptyState = container.querySelector('.empty-state');
-        if (emptyState) emptyState.remove();
-        
-        // Create messages container if it doesn't exist
-        if (!messagesDiv) {
-            messagesDiv = document.createElement('div');
-            messagesDiv.className = 'messages-container';
-            messagesDiv.id = 'messagesDiv';
-            container.appendChild(messagesDiv);
-        }
-        
-        const bubble = document.createElement('div');
-        bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
-        bubble.innerHTML = `
-            <div>${message.message}</div>
-            <div class="message-time">${formatMessageTime(message.timestamp)}</div>
-        `;
-        messagesDiv.appendChild(bubble);
-        container.scrollTop = container.scrollHeight;
-    }
-    
-    function formatMessageTime(timestamp) {
-        const date = new Date(timestamp);
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-    }
-    
-    function sendChatMessage(contact, inputElement) {
-        const message = inputElement.value.trim();
-        if (!message) return;
-        
-        // Emit message via socket
-        socket.emit('chat', {
-            fromUserId: currentUserId,
-            fromEmail: currentUserEmail,
-            fromName: currentUserName,
-            toUserId: contact.contactUserId,
-            toEmail: contact.contactEmail,
-            toName: contact.customName,
-            message: message,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Add to UI immediately
-        addMessageToUI({
-            message: message,
-            senderId: currentUserId,
-            timestamp: new Date().toISOString()
-        }, true);
-        
-        // Clear input
-        inputElement.value = '';
     }
     
     newChatBtn.addEventListener('click', showNewChatModal);
@@ -2203,18 +1928,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ===== Chat Message Events =====
     socket.on('new-message', function(data) {
         console.log('📨 New message received:', data);
-        
-        // Only show if we're currently in a chat with this person
-        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
-            addMessageToUI({
-                message: data.message,
-                senderId: data.fromUserId,
-                timestamp: data.timestamp
-            }, false);
-        } else {
-            // Show notification toast
-            showToast(`New message from ${data.fromName}`, 'info');
-        }
+        // Show notification toast - user will see full message in chat page
+        showToast(`New message from ${data.fromName}`, 'info');
     });
 
     socket.on('call-ended', function(data) {
