@@ -1606,12 +1606,17 @@ app.post('/register-fcm-token', async function(req, res) {
   // Map to store userId -> socketId for call routing
   const userSocketMap = new Map();
   const userFCMTokens = new Map();
+  // Map to track pending message notifications: recipientId -> Set of senderIds who have pending notifications
+  const pendingMessageNotifications = new Map();
+  
   io.on("connection", (socket) => {
     console.log("✅ Socket connected:", socket.id);
 
     // ===== User Registration =====
     socket.on("register-user", (userId) => {
       userSocketMap.set(userId, socket.id);
+      // Clear pending message notifications when user opens app
+      pendingMessageNotifications.delete(userId);
       console.log(`📱 User ${userId} registered with socket ${socket.id}`);
       console.log("📊 Active users:", Array.from(userSocketMap.keys()));
     });
@@ -1827,6 +1832,80 @@ app.post('/register-fcm-token', async function(req, res) {
             timestamp: newMessage.timestamp
           });
           console.log('📨 Message sent to recipient socket');
+        } else {
+          // Recipient is OFFLINE - send FCM notification if not already notified
+          // Check if we already sent a notification from this sender
+          let pendingFromSenders = pendingMessageNotifications.get(toUserId);
+          if (!pendingFromSenders) {
+            pendingFromSenders = new Set();
+            pendingMessageNotifications.set(toUserId, pendingFromSenders);
+          }
+          
+          // Only send notification if we haven't already notified about messages from this sender
+          if (!pendingFromSenders.has(fromUserId)) {
+            pendingFromSenders.add(fromUserId);
+            
+            // Get FCM token for recipient
+            let fcmToken = userFCMTokens.get(toUserId);
+            if (!fcmToken) {
+              const recipientUser = await User.findById(toUserId);
+              if (recipientUser && recipientUser.fcmToken) {
+                fcmToken = recipientUser.fcmToken;
+                userFCMTokens.set(toUserId, fcmToken);
+              }
+            }
+            
+            if (fcmToken) {
+              // Get display name from recipient's contacts
+              let displayName = fromName;
+              try {
+                const recipientUser = await User.findById(toUserId);
+                if (recipientUser) {
+                  const senderInContacts = recipientUser.contacts.find(c => c.contactUserId === fromUserId);
+                  if (senderInContacts) {
+                    displayName = senderInContacts.customName;
+                  }
+                }
+              } catch (err) {
+                console.error('Error looking up contact name for message:', err);
+              }
+              
+              const fcmMessage = {
+                notification: {
+                  title: `New message from ${displayName}`,
+                  body: message.length > 100 ? message.substring(0, 100) + '...' : message
+                },
+                data: {
+                  type: 'new-message',
+                  fromUserId: fromUserId,
+                  fromName: displayName,
+                  timestamp: new Date().toISOString()
+                },
+                token: fcmToken,
+                android: {
+                  priority: 'high',
+                  notification: {
+                    channelId: 'messages',
+                    sound: 'default'
+                  }
+                }
+              };
+              
+              try {
+                await admin.messaging().send(fcmMessage);
+                console.log(`📩 Message notification sent to ${toUserId} from ${fromUserId}`);
+              } catch (fcmError) {
+                console.error('❌ FCM message notification error:', fcmError);
+                if (fcmError.code === 'messaging/invalid-registration-token' || 
+                    fcmError.code === 'messaging/registration-token-not-registered') {
+                  userFCMTokens.delete(toUserId);
+                  await User.findByIdAndUpdate(toUserId, { fcmToken: null });
+                }
+              }
+            }
+          } else {
+            console.log(`⏭️ Skipping notification - ${toUserId} already notified about messages from ${fromUserId}`);
+          }
         }
         
       } catch (error) {
