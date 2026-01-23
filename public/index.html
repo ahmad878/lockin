@@ -879,6 +879,8 @@ let socket = null; // Will be initialized after DOM loads
 let remoteAudioElement = null;
 let pendingIceCandidates = []; // Buffer for ICE candidates received before remote description
 let connectionTimeout = null;
+let iceRetryCount = 0;
+const MAX_ICE_RETRIES = 3;
 
 const configuration = {
     iceServers: [
@@ -924,9 +926,46 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
             }
         };
 
-        // Handle ICE connection state
+        // Handle ICE connection state with retry logic
         peerConnection.oniceconnectionstatechange = () => {
             console.log('🧊 ICE connection state:', peerConnection.iceConnectionState);
+            
+            // If ICE fails or disconnects, try to restart
+            if (peerConnection.iceConnectionState === 'failed') {
+                if (iceRetryCount < MAX_ICE_RETRIES) {
+                    iceRetryCount++;
+                    console.log(`🔄 ICE failed, attempting restart ${iceRetryCount}/${MAX_ICE_RETRIES}`);
+                    try {
+                        peerConnection.restartIce();
+                    } catch (e) {
+                        console.error('ICE restart failed:', e);
+                    }
+                }
+            }
+            
+            // Reset retry count on successful connection
+            if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+                iceRetryCount = 0;
+                if (connectionTimeout) {
+                    clearTimeout(connectionTimeout);
+                    connectionTimeout = null;
+                }
+            }
+            
+            // Handle disconnected state - give it a moment then try restart
+            if (peerConnection.iceConnectionState === 'disconnected') {
+                setTimeout(() => {
+                    if (peerConnection && peerConnection.iceConnectionState === 'disconnected' && iceRetryCount < MAX_ICE_RETRIES) {
+                        iceRetryCount++;
+                        console.log(`🔄 ICE disconnected, attempting restart ${iceRetryCount}/${MAX_ICE_RETRIES}`);
+                        try {
+                            peerConnection.restartIce();
+                        } catch (e) {
+                            console.error('ICE restart failed:', e);
+                        }
+                    }
+                }, 2000);
+            }
         };
 
         // Handle remote stream
@@ -981,34 +1020,74 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
                     clearTimeout(connectionTimeout);
                     connectionTimeout = null;
                 }
+                iceRetryCount = 0;
+            }
+            
+            if (peerConnection.connectionState === 'failed') {
+                // Try ICE restart before giving up
+                if (iceRetryCount < MAX_ICE_RETRIES) {
+                    iceRetryCount++;
+                    console.log(`🔄 Connection failed, attempting ICE restart ${iceRetryCount}/${MAX_ICE_RETRIES}`);
+                    try {
+                        peerConnection.restartIce();
+                    } catch (e) {
+                        console.error('ICE restart failed:', e);
+                        endWebRTCCall();
+                    }
+                } else {
+                    endWebRTCCall();
+                }
             }
             
             if (peerConnection.connectionState === 'disconnected' || 
-                peerConnection.connectionState === 'failed' ||
                 peerConnection.connectionState === 'closed') {
                 endWebRTCCall();
             }
         };
         
-        // Set connection timeout (20 seconds) - only triggers if stuck
+        // Reset retry counter for new call
+        iceRetryCount = 0;
+        
+        // Set connection timeout (12 seconds) - shorter initial wait, then retry
         connectionTimeout = setTimeout(() => {
             if (peerConnection && peerConnection.connectionState !== 'connected') {
-                console.log('⏰ Connection timeout - attempting ICE restart');
-                try {
-                    peerConnection.restartIce();
-                    // Give it another 10 seconds after restart
-                    connectionTimeout = setTimeout(() => {
-                        if (peerConnection && peerConnection.connectionState !== 'connected') {
-                            console.log('❌ Connection failed after ICE restart');
-                            showToast('Connection failed. Please try again.', 'error');
-                            endWebRTCCall();
-                        }
-                    }, 10000);
-                } catch (e) {
-                    console.error('ICE restart failed:', e);
+                if (iceRetryCount < MAX_ICE_RETRIES) {
+                    iceRetryCount++;
+                    console.log(`⏰ Connection timeout - attempting ICE restart ${iceRetryCount}/${MAX_ICE_RETRIES}`);
+                    try {
+                        peerConnection.restartIce();
+                        // Set another timeout for next retry
+                        connectionTimeout = setTimeout(() => {
+                            if (peerConnection && peerConnection.connectionState !== 'connected') {
+                                if (iceRetryCount < MAX_ICE_RETRIES) {
+                                    iceRetryCount++;
+                                    console.log(`⏰ Still not connected - retry ${iceRetryCount}/${MAX_ICE_RETRIES}`);
+                                    peerConnection.restartIce();
+                                    // Final timeout
+                                    connectionTimeout = setTimeout(() => {
+                                        if (peerConnection && peerConnection.connectionState !== 'connected') {
+                                            console.log('❌ Connection failed after all retries');
+                                            showToast('Connection failed. Please try again.', 'error');
+                                            endWebRTCCall();
+                                        }
+                                    }, 8000);
+                                } else {
+                                    console.log('❌ Connection failed after all retries');
+                                    showToast('Connection failed. Please try again.', 'error');
+                                    endWebRTCCall();
+                                }
+                            }
+                        }, 8000);
+                    } catch (e) {
+                        console.error('ICE restart failed:', e);
+                    }
+                } else {
+                    console.log('❌ Connection failed - max retries reached');
+                    showToast('Connection failed. Please try again.', 'error');
+                    endWebRTCCall();
                 }
             }
-        }, 20000);
+        }, 12000);
 
         // If we are the caller, create and send offer
         if (isCaller && socket) {
