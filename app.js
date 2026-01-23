@@ -1254,8 +1254,6 @@ app.post('/register-fcm-token', async function(req, res) {
       });
     }
   });
-
-  // Save a call to history
   app.post('/calls/save', async function(req, res) {
     try {
       const token = req.cookies[COOKIE_NAME];
@@ -1284,6 +1282,14 @@ app.post('/register-fcm-token', async function(req, res) {
         return res.status(400).json({
           success: false,
           message: 'Caller and receiver IDs are required'
+        });
+      }
+
+      // Validate required email fields to prevent Mongoose validation errors
+      if (!callerEmail || !receiverEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'Caller and receiver emails are required'
         });
       }
 
