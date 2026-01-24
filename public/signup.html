@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Test Call App - Sign Up</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>WishTripper - Sign Up</title>
     <script>
         // Check if already authenticated - redirect to phone UI
         (async function() {
@@ -24,48 +27,67 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --accent-color: #667eea;
+            --text-dark: #1a1a2e;
+            --text-muted: #666;
+            --border-color: #e1e5e9;
+            --input-bg: #f8f9fa;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            min-height: 100%;
+            width: 100%;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: calc(var(--safe-area-top) + 20px) 20px calc(var(--safe-area-bottom) + 20px) 20px;
         }
 
         .app-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             animation: fadeIn 0.5s ease;
         }
 
         .app-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
         .app-logo {
             background: white;
-            width: 80px;
-            height: 80px;
-            border-radius: 20px;
+            width: 88px;
+            height: 88px;
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 0 auto 18px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         }
 
         .app-logo i {
-            font-size: 36px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 40px;
+            background: var(--primary-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -73,22 +95,22 @@
 
         .app-title {
             color: white;
-            font-size: 28px;
+            font-size: clamp(26px, 6vw, 32px);
             font-weight: 700;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-bottom: 6px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.2);
         }
 
         .app-subtitle {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.85);
             font-size: 16px;
         }
 
         .signup-card {
             background: white;
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 28px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
         }
 
         .form-group {
@@ -97,9 +119,9 @@
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--text-dark);
+            font-weight: 600;
             font-size: 14px;
         }
 
@@ -109,108 +131,108 @@
 
         .input-wrapper input {
             width: 100%;
-            padding: 16px;
-            padding-right: 50px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
+            padding: 16px 18px;
+            padding-right: 52px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
             font-size: 16px;
-            transition: all 0.3s;
-            background: #f8f9fa;
+            transition: all 0.2s ease;
+            background: var(--input-bg);
         }
 
         .input-wrapper input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-color);
             background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
         }
 
         .input-wrapper input.error {
-            border-color: #ff4757;
+            border-color: var(--error-color);
         }
 
         .password-toggle {
             position: absolute;
-            right: 15px;
+            right: 16px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #667eea;
+            color: var(--accent-color);
             cursor: pointer;
-            font-size: 18px;
+            font-size: 20px;
+            padding: 8px;
             display: none;
         }
 
         .error-message {
-            color: #ff4757;
-            font-size: 12px;
-            margin-top: 5px;
+            color: var(--error-color);
+            font-size: 13px;
+            margin-top: 8px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
         .password-strength {
-            margin-top: 10px;
+            margin-top: 12px;
         }
 
         .strength-bar {
-            height: 4px;
-            background: #e1e5e9;
-            border-radius: 2px;
+            height: 5px;
+            background: var(--border-color);
+            border-radius: 3px;
             overflow: hidden;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
 
         .strength-fill {
             height: 100%;
             width: 0%;
-            transition: all 0.3s;
-            border-radius: 2px;
+            transition: all 0.3s ease;
+            border-radius: 3px;
         }
 
         .strength-text {
             display: flex;
             justify-content: space-between;
             font-size: 12px;
-            color: #666;
+            color: var(--text-muted);
         }
 
         .signup-btn {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 14px;
+            font-size: 17px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
+            transition: all 0.2s ease;
+            margin-top: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
+            min-height: 56px;
         }
 
-        .signup-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        .signup-btn:active:not(:disabled) {
+            transform: scale(0.98);
         }
 
         .signup-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
         }
 
         .divider {
             display: flex;
             align-items: center;
-            margin: 25px 0;
-            color: #999;
+            margin: 28px 0;
+            color: var(--text-muted);
             font-size: 14px;
         }
 
@@ -219,51 +241,52 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: #e1e5e9;
+            background: var(--border-color);
         }
 
         .divider span {
-            padding: 0 15px;
+            padding: 0 16px;
         }
 
         .social-login {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .social-btn {
-            padding: 14px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
+            padding: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
             background: white;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 18px;
+            transition: all 0.2s ease;
+            font-size: 20px;
+            min-height: 56px;
         }
 
         .social-btn.google { color: #DB4437; }
         .social-btn.apple { color: #000; }
         .social-btn.facebook { color: #4267B2; }
 
-        .social-btn:hover {
-            transform: translateY(-2px);
-            border-color: #667eea;
+        .social-btn:active {
+            transform: scale(0.96);
+            border-color: var(--accent-color);
         }
 
         .login-link {
             text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 14px;
+            margin-top: 24px;
+            color: var(--text-muted);
+            font-size: 15px;
         }
 
         .login-link a {
-            color: #667eea;
+            color: var(--accent-color);
             text-decoration: none;
             font-weight: 600;
         }
@@ -280,6 +303,7 @@
             align-items: flex-end;
             justify-content: center;
             z-index: 1000;
+            padding-bottom: var(--safe-area-bottom);
         }
 
         .verification-overlay.active {
@@ -289,20 +313,20 @@
         .verification-card {
             background: white;
             border-radius: 32px 32px 0 0;
-            padding: 40px 25px 30px;
+            padding: 32px 24px calc(var(--safe-area-bottom) + 32px) 24px;
             width: 100%;
-            max-width: 100%;
+            max-width: 500px;
             animation: slideUp 0.4s ease;
         }
 
         .verification-header {
             text-align: center;
-            margin-bottom: 35px;
+            margin-bottom: 32px;
         }
 
         .verification-header i {
             font-size: 56px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -311,55 +335,56 @@
         }
 
         .verification-title {
-            font-size: 26px;
+            font-size: clamp(24px, 5vw, 28px);
             font-weight: 700;
-            color: #333;
+            color: var(--text-dark);
             margin-bottom: 12px;
         }
 
         .verification-subtitle {
-            color: #666;
+            color: var(--text-muted);
             font-size: 15px;
+            line-height: 1.5;
         }
 
         .verification-email {
-            color: #667eea;
+            color: var(--accent-color);
             font-weight: 600;
         }
 
         .verification-code-container {
             display: flex;
-            gap: 8px;
-            margin: 40px 0 35px;
+            gap: 10px;
+            margin: 36px 0 32px;
             justify-content: center;
         }
 
         .code-input {
-            width: 50px;
-            height: 70px;
+            width: 52px;
+            height: 68px;
             text-align: center;
             font-size: 28px;
-            font-weight: 600;
-            border: 3px solid #e1e5e9;
+            font-weight: 700;
+            border: 3px solid var(--border-color);
             border-radius: 16px;
-            background: #f8f9fa;
-            transition: all 0.3s ease;
-            color: #333;
+            background: var(--input-bg);
+            transition: all 0.2s ease;
+            color: var(--text-dark);
         }
 
         .code-input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-color);
             background: white;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
         }
 
         .code-input.filled {
-            border-color: #667eea;
+            border-color: var(--accent-color);
         }
 
         .code-input.error {
-            border-color: #ff4757;
+            border-color: var(--error-color);
             animation: shake 0.4s ease;
         }
 
@@ -374,12 +399,13 @@
             padding: 18px;
             border-radius: 14px;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 17px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
             border: none;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white;
+            min-height: 56px;
         }
 
         .verify-btn:disabled {
@@ -395,7 +421,7 @@
 
         .verification-success i {
             font-size: 64px;
-            color: #22c55e;
+            color: var(--success-color);
             margin-bottom: 20px;
         }
 
@@ -411,13 +437,15 @@
             border-radius: 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             z-index: 1001;
             animation: slideUp 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
 
-        .toast-notification.success { background: #22c55e; }
-        .toast-notification.error { background: #ff4757; }
+        .toast-notification.success { background: var(--success-color); }
+        .toast-notification.error { background: var(--error-color); }
 
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -436,7 +464,7 @@
             <div class="app-logo">
                 <i class="fas fa-phone-alt"></i>
             </div>
-            <h1 class="app-title">Test Call App</h1>
+            <h1 class="app-title">WishTripper</h1>
             <p class="app-subtitle">Create your account to get started</p>
         </div>
 
@@ -445,21 +473,21 @@
                 <div class="form-group">
                     <label for="fullName">Full Name</label>
                     <div class="input-wrapper">
-                        <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
+                        <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required autocomplete="name">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <div class="input-wrapper">
-                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email" autocapitalize="off">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-wrapper">
-                        <input type="password" id="password" name="password" placeholder="Create a password" required>
+                        <input type="password" id="password" name="password" placeholder="Create a password" required autocomplete="new-password">
                         <button type="button" class="password-toggle">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -477,7 +505,7 @@
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
                     <div class="input-wrapper">
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required autocomplete="new-password">
                     </div>
                 </div>
 

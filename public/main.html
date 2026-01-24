@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Test Call App - Main</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#111b21">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>WishTripper - Call</title>
     <script>
         // Check authentication and redirect to signup if not logged in
         (async function() {
@@ -31,146 +35,146 @@
     <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@capacitor/push-notifications@latest/dist/plugin.js"></script>
     <style>
+        :root {
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --primary-bg: #111b21;
+            --secondary-bg: #1f2c34;
+            --tertiary-bg: #202c33;
+            --accent-color: #00a884;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
+            --border-color: #233138;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background: var(--primary-bg);
+            overflow: hidden;
         }
 
         body {
-            background: #1a1a1a;
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: var(--safe-area-top) 0 var(--safe-area-bottom) 0;
         }
 
-        .phone-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            width: 100%;
-        }
-
-        .phone-frame {
-            width: 280px;
-            height: 560px;
-            background: #000;
-            border-radius: 40px;
-            padding: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            position: relative;
-            border: 2px solid #333;
-        }
-
-        .phone-frame::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 25px;
-            background: #000;
-            border-radius: 0 0 20px 20px;
-            z-index: 10;
-        }
-
-        .phone-screen {
+        .call-container {
             width: 100%;
             height: 100%;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-            border-radius: 35px;
-            overflow: hidden;
+            max-width: 500px;
             display: flex;
             flex-direction: column;
-            padding: 40px 20px 20px;
+            background: linear-gradient(180deg, #1a2634 0%, var(--primary-bg) 100%);
             position: relative;
         }
 
-        .phone-status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-            font-size: 12px;
-            margin-bottom: 20px;
-            padding: 0 10px;
+        /* Header */
+        .call-header {
+            padding: calc(var(--safe-area-top) + 20px) 24px 16px 24px;
+            text-align: center;
         }
 
-        .phone-time {
+        .call-header h1 {
+            color: var(--text-primary);
+            font-size: 22px;
             font-weight: 600;
+            margin-bottom: 4px;
         }
 
-        .phone-signals {
-            display: flex;
-            gap: 3px;
-            align-items: center;
+        .call-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
         }
 
-        .phone-signal {
-            width: 3px;
-            height: 8px;
-            background: white;
-            border-radius: 1px;
-        }
-
-        .phone-content {
+        /* Main Content */
+        .call-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 25px;
+            padding: 24px;
+            gap: 32px;
         }
 
-        .phone-dial-pad {
+        /* Avatar/Icon */
+        .call-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), #25d366);
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 20px;
-            width: 100%;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0, 168, 132, 0.3);
         }
 
-        .phone-input-wrapper {
+        .call-avatar i {
+            font-size: 48px;
+            color: white;
+        }
+
+        /* Input Section */
+        .input-section {
             width: 100%;
+            max-width: 340px;
+        }
+
+        .input-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
             position: relative;
         }
 
-        .phone-input {
+        .call-input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #667eea;
-            border-radius: 12px;
-            background: rgba(102, 126, 234, 0.1);
-            color: white;
-            font-size: 16px;
+            padding: 18px 20px;
+            background: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            color: var(--text-primary);
+            font-size: 18px;
             text-align: center;
-            letter-spacing: 2px;
-            font-weight: 500;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
         }
 
-        .phone-input::placeholder {
-            color: rgba(255,255,255,0.5);
+        .call-input::placeholder {
+            color: var(--text-secondary);
         }
 
-        .phone-input:focus {
+        .call-input:focus {
             outline: none;
-            background: rgba(102, 126, 234, 0.2);
-            border-color: #764ba2;
-            box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+            border-color: var(--accent-color);
+            background: var(--tertiary-bg);
         }
 
-        .phone-call-button {
-            width: 70px;
-            height: 70px;
+        /* Call Button */
+        .call-button {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            background: linear-gradient(135deg, var(--accent-green), #16a34a);
             border: none;
             color: white;
             font-size: 32px;
@@ -178,95 +182,102 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
-            transition: all 0.3s;
-            animation: pulse 2s infinite;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
+            transition: all 0.2s ease;
         }
 
-        @keyframes pulse {
-            0%, 100% {
-                box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
-            }
-            50% {
-                box-shadow: 0 8px 30px rgba(34, 197, 94, 0.7);
-            }
+        .call-button:active:not(:disabled) {
+            transform: scale(0.92);
         }
 
-        .phone-call-button:hover:not(:disabled) {
-            transform: scale(1.1);
-            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-        }
-
-        .phone-call-button:active:not(:disabled) {
-            transform: scale(0.95);
-        }
-
-        .phone-call-button:disabled {
+        .call-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            animation: none;
         }
 
-        .phone-display {
-            text-align: center;
-            color: white;
-            margin-bottom: 10px;
+        .call-button.loading i {
+            animation: spin 1s linear infinite;
         }
 
-        .phone-display-label {
-            font-size: 12px;
-            color: rgba(255,255,255,0.6);
-            margin-bottom: 5px;
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .phone-display-value {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            min-height: 25px;
-        }
-
+        /* Logout Button */
         .logout-btn {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            padding: 8px 16px;
-            background: rgba(255, 71, 87, 0.2);
-            border: 1px solid #ff4757;
-            color: #ff4757;
-            border-radius: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: rgba(255, 71, 87, 0.3);
-        }
-
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
+            bottom: calc(var(--safe-area-bottom) + 24px);
             left: 50%;
             transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 16px 24px;
+            padding: 12px 24px;
+            background: transparent;
+            border: 2px solid var(--accent-red);
+            color: var(--accent-red);
             border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+        }
+
+        .logout-btn:active {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Back Button */
+        .back-btn {
+            position: absolute;
+            top: calc(var(--safe-area-top) + 16px);
+            left: 16px;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 50%;
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:active {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Toast */
+        .toast-notification {
+            position: fixed;
+            bottom: calc(var(--safe-area-bottom) + 100px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             z-index: 1001;
             animation: slideUp 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            font-weight: 500;
         }
 
         .toast-notification.success {
-            background: #22c55e;
+            background: var(--accent-green);
+            color: white;
         }
 
         .toast-notification.error {
-            background: #ff4757;
+            background: var(--accent-red);
+            color: white;
         }
 
         @keyframes fadeIn {
@@ -285,61 +296,66 @@
             }
         }
 
-        @media (max-width: 480px) {
-            .phone-frame {
-                width: 100%;
-                max-width: 280px;
-                height: auto;
-                aspect-ratio: 9 / 18;
-            }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 8px 40px rgba(34, 197, 94, 0.6); }
+        }
 
-            .phone-screen {
-                padding: 35px 15px 15px;
+        .call-button:not(:disabled) {
+            animation: pulse 2s infinite;
+        }
+
+        /* Larger screens */
+        @media (min-width: 600px) {
+            .call-container {
+                border-radius: 24px;
+                max-height: 800px;
+                margin: 20px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             }
         }
     </style>
 </head>
 <body>
-    <div class="phone-wrapper">
-        <div class="phone-frame">
-            <div class="phone-screen">
-                <div class="phone-status-bar">
-                    <span class="phone-time" id="phoneTime">9:41</span>
-                    <div class="phone-signals">
-                        <div class="phone-signal"></div>
-                        <div class="phone-signal"></div>
-                        <div class="phone-signal"></div>
-                    </div>
-                </div>
+    <div class="call-container">
+        <button class="back-btn" onclick="window.location.href='/'">
+            <i class="fas fa-arrow-left"></i>
+        </button>
 
-                <div class="phone-content">
-                    <div class="phone-dial-pad">
-                        <div class="phone-display">
-                            <div class="phone-display-label">Enter email</div>
-                            <div class="phone-display-value" id="displayValue">-</div>
-                        </div>
-
-                        <div class="phone-input-wrapper">
-                            <input 
-                                type="email" 
-                                class="phone-input" 
-                                id="phoneUserInput" 
-                                placeholder="email@example.com"
-                                maxlength="100"
-                            >
-                        </div>
-
-                        <button class="phone-call-button" id="phoneCallBtn" title="Call">
-                            <i class="fas fa-phone"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <button class="logout-btn" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
+        <div class="call-header">
+            <h1>Make a Call</h1>
+            <p>Enter the email of someone to call</p>
         </div>
+
+        <div class="call-content">
+            <div class="call-avatar">
+                <i class="fas fa-phone-alt"></i>
+            </div>
+
+            <div class="input-section">
+                <div class="input-label">Recipient Email</div>
+                <div class="input-wrapper">
+                    <input 
+                        type="email" 
+                        class="call-input" 
+                        id="phoneUserInput" 
+                        placeholder="email@example.com"
+                        autocomplete="email"
+                        autocapitalize="off"
+                        spellcheck="false"
+                    >
+                </div>
+            </div>
+
+            <button class="call-button" id="phoneCallBtn" title="Call">
+                <i class="fas fa-phone"></i>
+            </button>
+        </div>
+
+        <button class="logout-btn" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Sign Out</span>
+        </button>
     </div>
     
 <script>
@@ -833,13 +849,12 @@ function hideCallStatus() {
 // ==================== MAIN INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async function() {
     const phoneInput = document.getElementById('phoneUserInput');
-    const displayValue = document.getElementById('displayValue');
     const phoneCallBtn = document.getElementById('phoneCallBtn');
     const logoutBtn = document.getElementById('logoutBtn');
-    const phoneTime = document.getElementById('phoneTime');
 
     phoneCallBtn.disabled = true;
-    phoneCallBtn.innerHTML = '<i class="fas fa-user-clock"></i>';
+    phoneCallBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    phoneCallBtn.classList.add('loading');
 
     // Fetch user data FIRST before setting up notifications
     const userData = await fetchUserData();
@@ -850,6 +865,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         phoneCallBtn.disabled = false;
         phoneCallBtn.innerHTML = '<i class="fas fa-phone"></i>';
+        phoneCallBtn.classList.remove('loading');
         
         // Request push notification permission (this also sets up listeners)
         await requestPushNotificationPermission();
@@ -919,21 +935,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         stopRingtone();
         hideCallStatus();
         showToast(`Call declined: ${data.reason || 'User busy'}`, 'error');
-    });
-
-    // ==================== TIME UPDATE ====================
-    function updateTime() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        phoneTime.textContent = `${hours}:${minutes}`;
-    }
-    updateTime();
-    setInterval(updateTime, 60000);
-
-    // ==================== PHONE INPUT ====================
-    phoneInput.addEventListener('input', function() {
-        displayValue.textContent = this.value || '-';
     });
 
     // ==================== CALL BUTTON ====================
