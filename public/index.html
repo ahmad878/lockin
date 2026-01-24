@@ -463,229 +463,9 @@
         .chats-list::-webkit-scrollbar-thumb:hover {
             background: #374952;
         }
-
-        /* Delete Button for Chat Items */
-        .chat-item-wrapper {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .chat-delete-btn {
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 0;
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
-            cursor: pointer;
-            transition: width 0.3s ease, opacity 0.3s ease;
-            opacity: 0;
-            overflow: hidden;
-        }
-
-        .chat-item-wrapper:hover .chat-delete-btn,
-        .chat-item-wrapper.show-delete .chat-delete-btn {
-            width: 70px;
-            opacity: 1;
-        }
-
-        .chat-delete-btn:hover {
-            background: linear-gradient(135deg, #c82333, #a71d2a);
-        }
-
-        .chat-delete-btn:active {
-            background: #a71d2a;
-        }
-
-        .chat-delete-btn i {
-            transition: transform 0.2s ease;
-        }
-
-        .chat-delete-btn:hover i {
-            transform: scale(1.2);
-        }
-
-        /* Chat item needs to be adjusted for wrapper */
-        .chat-item-wrapper .chat-item {
-            transition: transform 0.3s ease;
-            position: relative;
-            z-index: 1;
-            background: #0b141a;
-        }
-
-        .chat-item-wrapper:hover .chat-item {
-            transform: translateX(-70px);
-        }
-
-        .chat-item-wrapper.show-delete .chat-item {
-            transform: translateX(-70px);
-        }
-
-        /* Delete Confirmation Modal */
-        .delete-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-
-        .delete-modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .delete-modal {
-            background: #1f2c33;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 320px;
-            overflow: hidden;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .delete-modal-overlay.active .delete-modal {
-            transform: scale(1);
-        }
-
-        .delete-modal-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid #2a3942;
-        }
-
-        .delete-modal-icon {
-            width: 60px;
-            height: 60px;
-            background: rgba(220, 53, 69, 0.15);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-        }
-
-        .delete-modal-icon i {
-            font-size: 28px;
-            color: #dc3545;
-        }
-
-        .delete-modal-title {
-            color: #e9edef;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .delete-modal-message {
-            color: #8696a0;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .delete-modal-contact {
-            color: #25d366;
-            font-weight: 500;
-        }
-
-        .delete-modal-buttons {
-            display: flex;
-            padding: 15px;
-            gap: 10px;
-        }
-
-        .delete-modal-btn {
-            flex: 1;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: none;
-        }
-
-        .delete-modal-btn.cancel {
-            background: #2a3942;
-            color: #e9edef;
-        }
-
-        .delete-modal-btn.cancel:hover {
-            background: #374952;
-        }
-
-        .delete-modal-btn.confirm {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            color: white;
-        }
-
-        .delete-modal-btn.confirm:hover {
-            background: linear-gradient(135deg, #c82333, #a71d2a);
-            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
-        }
-
-        .delete-modal-btn.confirm:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* Mobile touch - show delete on long press indicator */
-        @media (hover: none) {
-            .chat-item-wrapper:hover .chat-delete-btn,
-            .chat-item-wrapper:hover .chat-item {
-                width: 0;
-                opacity: 0;
-                transform: none;
-            }
-            
-            .chat-item-wrapper.show-delete .chat-delete-btn {
-                width: 70px;
-                opacity: 1;
-            }
-            
-            .chat-item-wrapper.show-delete .chat-item {
-                transform: translateX(-70px);
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- Delete Confirmation Modal -->
-    <div class="delete-modal-overlay" id="deleteModalOverlay">
-        <div class="delete-modal">
-            <div class="delete-modal-header">
-                <div class="delete-modal-icon">
-                    <i class="fas fa-trash-alt"></i>
-                </div>
-                <h3 class="delete-modal-title">Delete Chat</h3>
-                <p class="delete-modal-message">
-                    Are you sure you want to delete the chat with <span class="delete-modal-contact" id="deleteContactName"></span>? This action cannot be undone.
-                </p>
-            </div>
-            <div class="delete-modal-buttons">
-                <button class="delete-modal-btn cancel" id="cancelDeleteBtn">Cancel</button>
-                <button class="delete-modal-btn confirm" id="confirmDeleteBtn">
-                    <i class="fas fa-trash-alt" style="margin-right: 6px;"></i>Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
     <div class="app-container">
         <!-- Header -->
         <div class="app-header">
@@ -764,118 +544,6 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
-
-// ==================== DELETE CHAT FUNCTIONS ====================
-let pendingDeleteEmail = null;
-
-function showDeleteConfirmation(contactEmail, contactName) {
-    pendingDeleteEmail = contactEmail;
-    const modal = document.getElementById('deleteModalOverlay');
-    const nameSpan = document.getElementById('deleteContactName');
-    
-    nameSpan.textContent = contactName || contactEmail;
-    modal.classList.add('active');
-    
-    // Close any open delete buttons
-    document.querySelectorAll('.chat-item-wrapper.show-delete').forEach(w => {
-        w.classList.remove('show-delete');
-    });
-}
-
-function hideDeleteConfirmation() {
-    const modal = document.getElementById('deleteModalOverlay');
-    modal.classList.remove('active');
-    pendingDeleteEmail = null;
-}
-
-async function deleteChat(contactEmail) {
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 6px;"></i>Deleting...';
-    
-    try {
-        const response = await fetch(`https://lockin-production.up.railway.app/chat/contact/${encodeURIComponent(contactEmail)}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('Chat deleted successfully', 'success');
-            hideDeleteConfirmation();
-            
-            // Remove the chat item from the list with animation
-            const wrapper = document.querySelector(`.chat-item-wrapper[data-contact-email="${contactEmail}"]`);
-            if (wrapper) {
-                wrapper.style.transition = 'all 0.3s ease';
-                wrapper.style.transform = 'translateX(-100%)';
-                wrapper.style.opacity = '0';
-                wrapper.style.maxHeight = wrapper.offsetHeight + 'px';
-                
-                setTimeout(() => {
-                    wrapper.style.maxHeight = '0';
-                    wrapper.style.padding = '0';
-                    wrapper.style.margin = '0';
-                    wrapper.style.borderBottom = 'none';
-                }, 300);
-                
-                setTimeout(() => {
-                    wrapper.remove();
-                    
-                    // Check if list is now empty
-                    const remainingChats = document.querySelectorAll('.chat-item-wrapper');
-                    if (remainingChats.length === 0) {
-                        document.getElementById('chatsList').innerHTML = `
-                            <div class="empty-state">
-                                <i class="fas fa-address-book"></i>
-                                <h3>No chats yet</h3>
-                                <p>Start a conversation with your contacts</p>
-                            </div>
-                        `;
-                    }
-                }, 600);
-            }
-        } else {
-            showToast(result.message || 'Failed to delete chat', 'error');
-        }
-    } catch (error) {
-        console.error('Delete chat error:', error);
-        showToast('Failed to delete chat. Please try again.', 'error');
-    } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fas fa-trash-alt" style="margin-right: 6px;"></i>Delete';
-        hideDeleteConfirmation();
-    }
-}
-
-// Initialize delete modal event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    const cancelBtn = document.getElementById('cancelDeleteBtn');
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    const overlay = document.getElementById('deleteModalOverlay');
-    
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', hideDeleteConfirmation);
-    }
-    
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
-            if (pendingDeleteEmail) {
-                deleteChat(pendingDeleteEmail);
-            }
-        });
-    }
-    
-    // Close modal when clicking outside
-    if (overlay) {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                hideDeleteConfirmation();
-            }
-        });
-    }
-});
 
 // ==================== RINGTONE FUNCTIONS ====================
 function playRingtone() {
@@ -2255,30 +1923,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isFromMe = item.lastMessage && item.lastMessage.senderId === currentUserId;
             
             return `
-                <div class="chat-item-wrapper" data-contact-email="${item.email}" data-contact-user-id="${item.userId}">
-                    <div class="chat-item" data-contact-email="${item.email}" data-contact-user-id="${item.userId}" data-is-contact="${item.isContact}" data-actual-name="${item.actualName}">
-                        <div class="chat-avatar">${initial}</div>
-                        <div class="chat-info">
-                            <div class="chat-header">
-                                <div class="chat-name">${item.displayName}${!item.isContact ? ' <span style="font-size: 10px; color: #8696a0; font-weight: normal;">(not in contacts)</span>' : ''}</div>
-                                ${lastMsgTime ? `<div class="chat-time">${lastMsgTime}</div>` : ''}
-                            </div>
-                            <div class="chat-preview">${isFromMe ? '<i class="fas fa-check-double" style="color: #53bdeb; margin-right: 4px; font-size: 12px;"></i>' : ''}${truncateText(lastMsgPreview, 35)}</div>
+                <div class="chat-item" data-contact-email="${item.email}" data-contact-user-id="${item.userId}" data-is-contact="${item.isContact}" data-actual-name="${item.actualName}">
+                    <div class="chat-avatar">${initial}</div>
+                    <div class="chat-info">
+                        <div class="chat-header">
+                            <div class="chat-name">${item.displayName}${!item.isContact ? ' <span style="font-size: 10px; color: #8696a0; font-weight: normal;">(not in contacts)</span>' : ''}</div>
+                            ${lastMsgTime ? `<div class="chat-time">${lastMsgTime}</div>` : ''}
                         </div>
-                    </div>
-                    <div class="chat-delete-btn" data-contact-email="${item.email}" data-contact-name="${item.displayName}">
-                        <i class="fas fa-trash-alt"></i>
+                        <div class="chat-preview">${isFromMe ? '<i class="fas fa-check-double" style="color: #53bdeb; margin-right: 4px; font-size: 12px;"></i>' : ''}${truncateText(lastMsgPreview, 35)}</div>
                     </div>
                 </div>
             `;
         }).join('');
         
         // Add click listeners to chat items
-        document.querySelectorAll('.chat-item-wrapper .chat-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                // Don't open chat if clicking on delete button area
-                if (e.target.closest('.chat-delete-btn')) return;
-                
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.addEventListener('click', () => {
                 const email = item.dataset.contactEmail;
                 const userId = item.dataset.contactUserId;
                 const isContact = item.dataset.isContact === 'true';
@@ -2293,39 +1953,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 };
                 
                 openContactChat(contactObj);
-            });
-        });
-        
-        // Add delete button listeners
-        document.querySelectorAll('.chat-delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const email = btn.dataset.contactEmail;
-                const name = btn.dataset.contactName;
-                showDeleteConfirmation(email, name);
-            });
-        });
-        
-        // Add long press for mobile to show delete button
-        document.querySelectorAll('.chat-item-wrapper').forEach(wrapper => {
-            let pressTimer;
-            
-            wrapper.addEventListener('touchstart', (e) => {
-                pressTimer = setTimeout(() => {
-                    // Close any other open delete buttons
-                    document.querySelectorAll('.chat-item-wrapper.show-delete').forEach(w => {
-                        if (w !== wrapper) w.classList.remove('show-delete');
-                    });
-                    wrapper.classList.toggle('show-delete');
-                }, 500);
-            });
-            
-            wrapper.addEventListener('touchend', () => {
-                clearTimeout(pressTimer);
-            });
-            
-            wrapper.addEventListener('touchmove', () => {
-                clearTimeout(pressTimer);
             });
         });
     }
@@ -2552,6 +2179,109 @@ document.addEventListener('DOMContentLoaded', async function() {
                 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
                 30% { transform: translateY(-6px); opacity: 1; }
             }
+            
+            /* Delete Message Styles */
+            .message-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 4px 0;
+            }
+            .message-wrapper.sent {
+                flex-direction: row-reverse;
+            }
+            .message-wrapper .message-bubble {
+                margin: 0;
+            }
+            .message-delete-btn {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(220, 53, 69, 0.1);
+                border: none;
+                color: #dc3545;
+                font-size: 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
+            }
+            .message-wrapper:hover .message-delete-btn,
+            .message-wrapper.show-delete .message-delete-btn {
+                opacity: 1;
+            }
+            .message-delete-btn:hover {
+                background: rgba(220, 53, 69, 0.25);
+                transform: scale(1.1);
+            }
+            .message-delete-btn:active {
+                transform: scale(0.95);
+            }
+            .message-delete-btn.deleting {
+                opacity: 1;
+                pointer-events: none;
+            }
+            .message-delete-btn.deleting i {
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            
+            /* Delete confirmation popup */
+            .delete-msg-popup {
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%) translateY(20px);
+                background: #1f2c33;
+                padding: 12px 20px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+                z-index: 3000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            .delete-msg-popup.active {
+                opacity: 1;
+                visibility: visible;
+                transform: translateX(-50%) translateY(0);
+            }
+            .delete-msg-popup-text {
+                color: #e9edef;
+                font-size: 14px;
+            }
+            .delete-msg-popup-btn {
+                padding: 8px 16px;
+                border-radius: 20px;
+                border: none;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .delete-msg-popup-btn.cancel {
+                background: #2a3942;
+                color: #e9edef;
+            }
+            .delete-msg-popup-btn.cancel:hover {
+                background: #374952;
+            }
+            .delete-msg-popup-btn.confirm {
+                background: #dc3545;
+                color: white;
+            }
+            .delete-msg-popup-btn.confirm:hover {
+                background: #c82333;
+            }
         `;
         document.head.appendChild(style);
         
@@ -2709,15 +2439,48 @@ document.addEventListener('DOMContentLoaded', async function() {
         messagesDiv.className = 'messages-container';
         messagesDiv.id = 'messagesDiv';
         
-        messages.forEach(msg => {
+        messages.forEach((msg, index) => {
             const isSent = msg.senderId === currentUserId;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+            wrapper.dataset.messageIndex = index;
+            
             const bubble = document.createElement('div');
             bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
             bubble.innerHTML = `
                 <div>${msg.message}</div>
                 <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
             `;
-            messagesDiv.appendChild(bubble);
+            
+            wrapper.appendChild(bubble);
+            
+            // Add delete button only for sent messages
+            if (isSent) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'message-delete-btn';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.title = 'Delete message';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showDeleteMessageConfirm(index, contact.contactEmail, wrapper);
+                };
+                wrapper.appendChild(deleteBtn);
+            }
+            
+            // Long press for mobile to show delete button
+            if (isSent) {
+                let pressTimer;
+                wrapper.addEventListener('touchstart', () => {
+                    pressTimer = setTimeout(() => {
+                        wrapper.classList.toggle('show-delete');
+                    }, 400);
+                });
+                wrapper.addEventListener('touchend', () => clearTimeout(pressTimer));
+                wrapper.addEventListener('touchmove', () => clearTimeout(pressTimer));
+            }
+            
+            messagesDiv.appendChild(wrapper);
         });
         
         container.innerHTML = '';
@@ -2744,14 +2507,157 @@ document.addEventListener('DOMContentLoaded', async function() {
             container.appendChild(messagesDiv);
         }
         
+        // Get the current message index
+        const existingMessages = messagesDiv.querySelectorAll('.message-wrapper');
+        const newIndex = existingMessages.length;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+        wrapper.dataset.messageIndex = newIndex;
+        
         const bubble = document.createElement('div');
         bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
         bubble.innerHTML = `
             <div>${message.message}</div>
             <div class="message-time">${formatMessageTime(message.timestamp)}</div>
         `;
-        messagesDiv.appendChild(bubble);
+        
+        wrapper.appendChild(bubble);
+        
+        // Add delete button only for sent messages
+        if (isSent && selectedContact) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'message-delete-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.title = 'Delete message';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                showDeleteMessageConfirm(newIndex, selectedContact.contactEmail, wrapper);
+            };
+            wrapper.appendChild(deleteBtn);
+            
+            // Long press for mobile
+            let pressTimer;
+            wrapper.addEventListener('touchstart', () => {
+                pressTimer = setTimeout(() => {
+                    wrapper.classList.toggle('show-delete');
+                }, 400);
+            });
+            wrapper.addEventListener('touchend', () => clearTimeout(pressTimer));
+            wrapper.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        }
+        
+        messagesDiv.appendChild(wrapper);
         container.scrollTop = container.scrollHeight;
+    }
+    
+    // ==================== DELETE MESSAGE FUNCTIONS ====================
+    let pendingDeleteData = null;
+    
+    function showDeleteMessageConfirm(messageIndex, contactEmail, wrapperElement) {
+        // Remove any existing popup
+        const existingPopup = document.querySelector('.delete-msg-popup');
+        if (existingPopup) existingPopup.remove();
+        
+        pendingDeleteData = { messageIndex, contactEmail, wrapperElement };
+        
+        const popup = document.createElement('div');
+        popup.className = 'delete-msg-popup active';
+        popup.innerHTML = `
+            <span class="delete-msg-popup-text">Delete this message?</span>
+            <button class="delete-msg-popup-btn cancel" onclick="hideDeleteMessagePopup()">Cancel</button>
+            <button class="delete-msg-popup-btn confirm" onclick="confirmDeleteMessage()">Delete</button>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (document.body.contains(popup)) {
+                hideDeleteMessagePopup();
+            }
+        }, 5000);
+    }
+    
+    function hideDeleteMessagePopup() {
+        const popup = document.querySelector('.delete-msg-popup');
+        if (popup) {
+            popup.classList.remove('active');
+            setTimeout(() => popup.remove(), 300);
+        }
+        pendingDeleteData = null;
+    }
+    
+    async function confirmDeleteMessage() {
+        if (!pendingDeleteData) return;
+        
+        const { messageIndex, contactEmail, wrapperElement } = pendingDeleteData;
+        const deleteBtn = wrapperElement.querySelector('.message-delete-btn');
+        
+        // Show loading state
+        if (deleteBtn) {
+            deleteBtn.classList.add('deleting');
+            deleteBtn.innerHTML = '<i class="fas fa-spinner"></i>';
+        }
+        
+        hideDeleteMessagePopup();
+        
+        try {
+            const response = await fetch(`https://lockin-production.up.railway.app/chat/${encodeURIComponent(contactEmail)}/message/${messageIndex}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Animate and remove the message
+                wrapperElement.style.transition = 'all 0.3s ease';
+                wrapperElement.style.transform = 'translateX(100%)';
+                wrapperElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    wrapperElement.style.maxHeight = wrapperElement.offsetHeight + 'px';
+                    wrapperElement.style.overflow = 'hidden';
+                }, 50);
+                
+                setTimeout(() => {
+                    wrapperElement.style.maxHeight = '0';
+                    wrapperElement.style.margin = '0';
+                    wrapperElement.style.padding = '0';
+                }, 300);
+                
+                setTimeout(() => {
+                    wrapperElement.remove();
+                    
+                    // Update message indices for remaining messages
+                    const container = document.getElementById('messagesDiv');
+                    if (container) {
+                        const wrappers = container.querySelectorAll('.message-wrapper');
+                        wrappers.forEach((w, idx) => {
+                            w.dataset.messageIndex = idx;
+                        });
+                    }
+                }, 600);
+                
+                showToast('Message deleted', 'success');
+            } else {
+                showToast(result.message || 'Failed to delete message', 'error');
+                // Restore button
+                if (deleteBtn) {
+                    deleteBtn.classList.remove('deleting');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                }
+            }
+        } catch (error) {
+            console.error('Delete message error:', error);
+            showToast('Failed to delete message', 'error');
+            // Restore button
+            if (deleteBtn) {
+                deleteBtn.classList.remove('deleting');
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            }
+        }
     }
     
     // ==================== TYPING INDICATOR UI ====================

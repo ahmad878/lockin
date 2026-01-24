@@ -1190,62 +1190,8 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
-  // Delete a specific chat by chatId
-  app.delete('/chat/:chatId', async function(req, res) {
-    try {
-      const token = req.cookies[COOKIE_NAME];
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'Not authenticated'
-        });
-      }
-
-      const decoded = verifyToken(token);
-      if (!decoded) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token'
-        });
-      }
-
-      const chatId = req.params.chatId;
-
-      // Find the chat and verify the user is a participant
-      const chat = await Chat.findOne({
-        _id: chatId,
-        $or: [
-          { 'person1.userId': decoded.id },
-          { 'person2.userId': decoded.id }
-        ]
-      });
-
-      if (!chat) {
-        return res.status(404).json({
-          success: false,
-          message: 'Chat not found or you are not a participant'
-        });
-      }
-
-      // Delete the chat
-      await Chat.findByIdAndDelete(chatId);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Chat deleted successfully'
-      });
-
-    } catch (error) {
-      console.error('Delete chat error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Server error'
-      });
-    }
-  });
-
-  // Delete chat by contact email
-  app.delete('/chat/contact/:contactEmail', async function(req, res) {
+  // Delete a specific message from a chat
+  app.delete('/chat/:contactEmail/message/:messageIndex', async function(req, res) {
     try {
       const token = req.cookies[COOKIE_NAME];
       if (!token) {
@@ -1264,6 +1210,14 @@ app.post('/register-fcm-token', async function(req, res) {
       }
 
       const contactEmail = req.params.contactEmail.trim().toLowerCase();
+      const messageIndex = parseInt(req.params.messageIndex);
+
+      if (isNaN(messageIndex) || messageIndex < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid message index'
+        });
+      }
 
       // Find the contact user
       const contactUser = await User.findOne({ email: contactEmail });
@@ -1274,8 +1228,8 @@ app.post('/register-fcm-token', async function(req, res) {
         });
       }
 
-      // Find and delete chat between current user and contact
-      const chat = await Chat.findOneAndDelete({
+      // Find chat between current user and contact
+      const chat = await Chat.findOne({
         $or: [
           { 'person1.userId': decoded.id, 'person2.userId': contactUser._id.toString() },
           { 'person1.userId': contactUser._id.toString(), 'person2.userId': decoded.id }
@@ -1285,17 +1239,56 @@ app.post('/register-fcm-token', async function(req, res) {
       if (!chat) {
         return res.status(404).json({
           success: false,
-          message: 'No chat found with this contact'
+          message: 'Chat not found'
         });
       }
 
+      // Check if message index is valid
+      if (messageIndex >= chat.messages.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Message not found'
+        });
+      }
+
+      // Check if user is the sender of the message (only allow deleting own messages)
+      const message = chat.messages[messageIndex];
+      if (message.senderId !== decoded.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only delete your own messages'
+        });
+      }
+
+      // Remove the message
+      chat.messages.splice(messageIndex, 1);
+
+      // Update lastMessage if we deleted the last message
+      if (chat.messages.length > 0) {
+        const lastMsg = chat.messages[chat.messages.length - 1];
+        chat.lastMessage = {
+          message: lastMsg.message,
+          timestamp: lastMsg.timestamp,
+          senderId: lastMsg.senderId
+        };
+      } else {
+        chat.lastMessage = {
+          message: '',
+          timestamp: new Date(),
+          senderId: ''
+        };
+      }
+
+      chat.updatedAt = new Date();
+      await chat.save();
+
       return res.status(200).json({
         success: true,
-        message: 'Chat deleted successfully'
+        message: 'Message deleted successfully'
       });
 
     } catch (error) {
-      console.error('Delete chat by contact error:', error);
+      console.error('Delete message error:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error'
