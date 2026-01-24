@@ -288,6 +288,10 @@ console.log('✅ Firebase Admin initialized');
       delivered: {
         type: Boolean,
         default: false
+      },
+      deleted: {
+        type: Boolean,
+        default: false
       }
     }],
     lastMessage: {
@@ -1260,27 +1264,32 @@ app.post('/register-fcm-token', async function(req, res) {
         });
       }
 
-      // Remove the message
-      chat.messages.splice(messageIndex, 1);
+      // Mark the message as deleted (don't remove it, so other person sees it was deleted)
+      chat.messages[messageIndex].deleted = true;
+      chat.messages[messageIndex].message = 'This message was deleted';
 
-      // Update lastMessage if we deleted the last message
-      if (chat.messages.length > 0) {
-        const lastMsg = chat.messages[chat.messages.length - 1];
+      // Update lastMessage if this was the last message
+      if (messageIndex === chat.messages.length - 1) {
         chat.lastMessage = {
-          message: lastMsg.message,
-          timestamp: lastMsg.timestamp,
-          senderId: lastMsg.senderId
-        };
-      } else {
-        chat.lastMessage = {
-          message: '',
-          timestamp: new Date(),
-          senderId: ''
+          message: 'This message was deleted',
+          timestamp: chat.messages[messageIndex].timestamp,
+          senderId: chat.messages[messageIndex].senderId
         };
       }
 
       chat.updatedAt = new Date();
       await chat.save();
+
+      // Notify the other person via socket that a message was deleted
+      const recipientSocketId = userSocketMap.get(contactUser._id.toString());
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit('message-deleted', {
+          fromUserId: decoded.id,
+          fromEmail: decoded.email,
+          messageIndex: messageIndex,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       return res.status(200).json({
         success: true,

@@ -2143,6 +2143,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 color: #e9edef;
                 align-self: flex-start;
             }
+            .message-deleted {
+                font-style: italic;
+                opacity: 0.7;
+            }
+            .message-deleted .message-content {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .message-deleted .message-content i {
+                font-size: 12px;
+                color: #8696a0;
+            }
             .message-time {
                 font-size: 11px;
                 color: #8696a0;
@@ -2441,22 +2454,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         messages.forEach((msg, index) => {
             const isSent = msg.senderId === currentUserId;
+            const isDeleted = msg.deleted === true;
             
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
             wrapper.dataset.messageIndex = index;
             
             const bubble = document.createElement('div');
-            bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
-            bubble.innerHTML = `
-                <div>${msg.message}</div>
-                <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-            `;
+            bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}${isDeleted ? ' message-deleted' : ''}`;
+            
+            if (isDeleted) {
+                bubble.innerHTML = `
+                    <div class="message-content"><i class="fas fa-ban"></i> This message was deleted</div>
+                    <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+                `;
+            } else {
+                bubble.innerHTML = `
+                    <div>${msg.message}</div>
+                    <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+                `;
+            }
             
             wrapper.appendChild(bubble);
             
-            // Add delete button only for sent messages
-            if (isSent) {
+            // Add delete button only for sent messages that are not already deleted
+            if (isSent && !isDeleted) {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'message-delete-btn';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
@@ -2469,7 +2491,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             // Long press for mobile to show delete button
-            if (isSent) {
+            if (isSent && !isDeleted) {
                 let pressTimer;
                 wrapper.addEventListener('touchstart', () => {
                     pressTimer = setTimeout(() => {
@@ -2597,6 +2619,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const { messageIndex, contactEmail, wrapperElement } = pendingDeleteData;
         const deleteBtn = wrapperElement.querySelector('.message-delete-btn');
+        const bubble = wrapperElement.querySelector('.message-bubble');
         
         // Show loading state
         if (deleteBtn) {
@@ -2615,36 +2638,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             const result = await response.json();
             
             if (result.success) {
-                // Animate and remove the message
-                wrapperElement.style.transition = 'all 0.3s ease';
-                wrapperElement.style.transform = 'translateX(100%)';
-                wrapperElement.style.opacity = '0';
+                // Update the message to show "deleted" state instead of removing
+                if (bubble) {
+                    const timeText = bubble.querySelector('.message-time').textContent;
+                    bubble.classList.add('message-deleted');
+                    bubble.innerHTML = `
+                        <div class="message-content"><i class="fas fa-ban"></i> This message was deleted</div>
+                        <div class="message-time">${timeText}</div>
+                    `;
+                }
                 
-                setTimeout(() => {
-                    wrapperElement.style.maxHeight = wrapperElement.offsetHeight + 'px';
-                    wrapperElement.style.overflow = 'hidden';
-                }, 50);
-                
-                setTimeout(() => {
-                    wrapperElement.style.maxHeight = '0';
-                    wrapperElement.style.margin = '0';
-                    wrapperElement.style.padding = '0';
-                }, 300);
-                
-                setTimeout(() => {
-                    wrapperElement.remove();
-                    
-                    // Update message indices for remaining messages
-                    const container = document.getElementById('messagesDiv');
-                    if (container) {
-                        const wrappers = container.querySelectorAll('.message-wrapper');
-                        wrappers.forEach((w, idx) => {
-                            w.dataset.messageIndex = idx;
-                        });
-                    }
-                }, 600);
+                // Remove the delete button
+                if (deleteBtn) {
+                    deleteBtn.remove();
+                }
                 
                 showToast('Message deleted', 'success');
+                
+                // Refresh contacts list to update the last message preview
+                loadContacts();
             } else {
                 showToast(result.message || 'Failed to delete message', 'error');
                 // Restore button
@@ -2955,6 +2967,32 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Refresh the contacts/chats list so new messages appear
             loadContacts();
         }
+    });
+    
+    // ===== Message Deleted Event =====
+    socket.on('message-deleted', function(data) {
+        console.log('🗑️ Message deleted by:', data.fromUserId);
+        
+        // Only update if we're currently in a chat with this person
+        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
+            const messagesDiv = document.getElementById('messagesDiv');
+            if (messagesDiv) {
+                const wrapper = messagesDiv.querySelector(`[data-message-index="${data.messageIndex}"]`);
+                if (wrapper) {
+                    const bubble = wrapper.querySelector('.message-bubble');
+                    if (bubble) {
+                        bubble.classList.add('message-deleted');
+                        bubble.innerHTML = `
+                            <div class="message-content"><i class="fas fa-ban"></i> This message was deleted</div>
+                            <div class="message-time">${bubble.querySelector('.message-time').textContent}</div>
+                        `;
+                    }
+                }
+            }
+        }
+        
+        // Refresh the contacts/chats list to update last message preview
+        loadContacts();
     });
     
     // ===== Typing Indicator Events =====
