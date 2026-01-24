@@ -1190,6 +1190,119 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
+  // Delete a specific chat by chatId
+  app.delete('/chat/:chatId', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const chatId = req.params.chatId;
+
+      // Find the chat and verify the user is a participant
+      const chat = await Chat.findOne({
+        _id: chatId,
+        $or: [
+          { 'person1.userId': decoded.id },
+          { 'person2.userId': decoded.id }
+        ]
+      });
+
+      if (!chat) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chat not found or you are not a participant'
+        });
+      }
+
+      // Delete the chat
+      await Chat.findByIdAndDelete(chatId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Chat deleted successfully'
+      });
+
+    } catch (error) {
+      console.error('Delete chat error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
+  // Delete chat by contact email
+  app.delete('/chat/contact/:contactEmail', async function(req, res) {
+    try {
+      const token = req.cookies[COOKIE_NAME];
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      const contactEmail = req.params.contactEmail.trim().toLowerCase();
+
+      // Find the contact user
+      const contactUser = await User.findOne({ email: contactEmail });
+      if (!contactUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'Contact not found'
+        });
+      }
+
+      // Find and delete chat between current user and contact
+      const chat = await Chat.findOneAndDelete({
+        $or: [
+          { 'person1.userId': decoded.id, 'person2.userId': contactUser._id.toString() },
+          { 'person1.userId': contactUser._id.toString(), 'person2.userId': decoded.id }
+        ]
+      });
+
+      if (!chat) {
+        return res.status(404).json({
+          success: false,
+          message: 'No chat found with this contact'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Chat deleted successfully'
+      });
+
+    } catch (error) {
+      console.error('Delete chat by contact error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error'
+      });
+    }
+  });
+
   // ===== CALL HISTORY MANAGEMENT =====
   
   // Get call history for current user
