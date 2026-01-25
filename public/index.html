@@ -1098,6 +1098,13 @@ let connectionTimeout = null;
 let iceRetryCount = 0;
 const MAX_ICE_RETRIES = 3;
 
+// Speaker control variables
+let isSpeakerOn = false; // Speaker OFF by default
+let audioContext = null;
+let gainNode = null;
+const SPEAKER_ON_GAIN = 3.0; // High volume when speaker is on
+const SPEAKER_OFF_GAIN = 0.5; // Lower volume when speaker is off (earpiece mode)
+
 const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -1198,22 +1205,23 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
                 document.body.appendChild(remoteAudioElement);
             }
             
-            // Use Web Audio API to boost volume
+            // Use Web Audio API to control volume (speaker on/off)
             try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(event.streams[0]);
-                const gainNode = audioContext.createGain();
-                gainNode.gain.value = 3.0; // Boost volume 3x
+                gainNode = audioContext.createGain();
+                // Set initial gain based on speaker state (OFF by default = lower volume)
+                gainNode.gain.value = isSpeakerOn ? SPEAKER_ON_GAIN : SPEAKER_OFF_GAIN;
                 source.connect(gainNode);
                 gainNode.connect(audioContext.destination);
-                console.log('🔊 Audio boosted with gain: 3.0');
+                console.log('🔊 Audio initialized with gain:', gainNode.gain.value, '(Speaker:', isSpeakerOn ? 'ON' : 'OFF', ')');
             } catch (err) {
-                console.log('⚠️ Could not boost audio, using default:', err);
+                console.log('⚠️ Could not setup audio gain, using default:', err);
             }
             
             // Also play through audio element as backup
             remoteAudioElement.srcObject = event.streams[0];
-            remoteAudioElement.volume = 1.0;
+            remoteAudioElement.volume = isSpeakerOn ? 1.0 : 0.3; // Lower volume when speaker is off
             remoteAudioElement.play()
                 .then(() => console.log('✅ Remote audio playing'))
                 .catch(err => {
@@ -1516,7 +1524,7 @@ function showInCallUI(contactName) {
                     align-items: center;
                     justify-content: center;
                 ">
-                    <i class="fas fa-volume-up"></i>
+                    <i class="fas fa-volume-down"></i>
                 </button>
                 <span style="color: #8696a0; font-size: 13px; font-weight: 500;">Speaker</span>
             </div>
@@ -1569,9 +1577,34 @@ function showInCallUI(contactName) {
         }
     });
 
-    // Speaker button (placeholder for mobile)
+    // Speaker button - toggles between earpiece (low volume) and speaker (high volume)
     document.getElementById('speakerBtn').addEventListener('click', () => {
-        showToast('Speaker control', 'info');
+        isSpeakerOn = !isSpeakerOn;
+        
+        // Update gain if audio context exists
+        if (gainNode) {
+            gainNode.gain.value = isSpeakerOn ? SPEAKER_ON_GAIN : SPEAKER_OFF_GAIN;
+            console.log('🔊 Speaker toggled:', isSpeakerOn ? 'ON' : 'OFF', 'Gain:', gainNode.gain.value);
+        }
+        
+        // Also update the audio element volume as backup
+        if (remoteAudioElement) {
+            remoteAudioElement.volume = isSpeakerOn ? 1.0 : 0.3;
+        }
+        
+        // Update button appearance
+        const speakerBtn = document.getElementById('speakerBtn');
+        if (isSpeakerOn) {
+            speakerBtn.style.background = 'rgba(34, 197, 94, 0.3)'; // Green tint when ON
+            speakerBtn.style.border = '2px solid rgba(34, 197, 94, 0.6)';
+            speakerBtn.innerHTML = '<i class="fas fa-volume-up" style="color: #22c55e;"></i>';
+        } else {
+            speakerBtn.style.background = 'rgba(255,255,255,0.1)'; // Default when OFF
+            speakerBtn.style.border = 'none';
+            speakerBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+        }
+        
+        showToast(isSpeakerOn ? 'Speaker ON' : 'Speaker OFF (Earpiece)', 'info');
     });
 
     // End call button
@@ -1630,6 +1663,18 @@ function endWebRTCCall() {
         remoteAudioElement.remove();
         remoteAudioElement = null;
     }
+
+    // Clean up audio context and reset speaker state
+    if (audioContext) {
+        try {
+            audioContext.close();
+        } catch (e) {
+            console.log('Audio context close error:', e);
+        }
+        audioContext = null;
+        gainNode = null;
+    }
+    isSpeakerOn = false; // Reset speaker to OFF for next call
 
     // Close peer connection
     if (peerConnection) {
