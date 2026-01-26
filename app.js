@@ -378,7 +378,7 @@ console.log('✅ Firebase Admin initialized');
 
   // ===== CORS Configuration =====
   app.use(cors({
-    origin: "*",
+    origin: ["http://localhost:3000", "https://localhost", "capacitor://localhost", "https://lockin-production.up.railway.app"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
