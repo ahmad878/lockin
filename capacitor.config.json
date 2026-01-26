@@ -6,11 +6,12 @@
     "cleartext": true,
     "allowNavigation": [
       "lockin-production.up.railway.app"
-    ]
+    ],
+    "androidScheme": "https"
   },
   "plugins": {
     "CapacitorHttp": {
-      "enabled": true
+      "enabled": false
     },
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon_config_sample",
