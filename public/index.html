@@ -703,6 +703,123 @@ function setupSafeArea() {
 // Call setup on load
 setupSafeArea();
 
+// ==================== APP LIFECYCLE HANDLING ====================
+// Handle app going to background/closing while on a call
+function setupAppLifecycleHandling() {
+    const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    
+    // Track if we're in a call
+    let wasInCall = false;
+    let backgroundTimeout = null;
+    
+    // Function to check if we're in an active call
+    const isInActiveCall = () => {
+        return callUIShown || 
+               document.getElementById('inCallUI') || 
+               document.getElementById('minimizedCallIndicator') ||
+               (peerConnection && peerConnection.connectionState === 'connected');
+    };
+    
+    // Function to properly end call when app is closed/backgrounded too long
+    const handleAppClose = () => {
+        if (isInActiveCall() && socket && currentUserId && remoteUserId) {
+            console.log('📱 App closing/backgrounded - ending call properly');
+            socket.emit('end-call', { fromUserId: currentUserId, toUserId: remoteUserId });
+            endWebRTCCall();
+        }
+    };
+    
+    if (isCapacitor) {
+        // Use Capacitor App plugin for native app state changes
+        try {
+            const { App } = window.Capacitor.Plugins;
+            if (App) {
+                App.addListener('appStateChange', ({ isActive }) => {
+                    console.log('📱 App state changed:', isActive ? 'FOREGROUND' : 'BACKGROUND');
+                    
+                    if (!isActive) {
+                        // App went to background
+                        wasInCall = isInActiveCall();
+                        
+                        if (wasInCall) {
+                            console.log('📱 App backgrounded while in call - starting timeout');
+                            // Give 30 seconds before ending the call (allows quick app switches)
+                            backgroundTimeout = setTimeout(() => {
+                                if (isInActiveCall()) {
+                                    console.log('📱 App backgrounded too long - ending call');
+                                    handleAppClose();
+                                }
+                            }, 30000); // 30 second grace period
+                        }
+                    } else {
+                        // App came back to foreground
+                        if (backgroundTimeout) {
+                            clearTimeout(backgroundTimeout);
+                            backgroundTimeout = null;
+                            console.log('📱 App returned to foreground - cancelled call end timeout');
+                        }
+                    }
+                });
+                
+                // Handle app being terminated
+                App.addListener('backButton', () => {
+                    if (isInActiveCall()) {
+                        // Show confirmation before ending call
+                        if (confirm('You are in a call. Do you want to end the call and exit?')) {
+                            handleAppClose();
+                        }
+                        return; // Prevent default back behavior
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('⚠️ Could not setup Capacitor App listener:', err);
+        }
+    }
+    
+    // Also handle browser visibility change (works on web and as fallback)
+    document.addEventListener('visibilitychange', () => {
+        console.log('📱 Visibility changed:', document.visibilityState);
+        
+        if (document.visibilityState === 'hidden') {
+            wasInCall = isInActiveCall();
+            
+            if (wasInCall && !isCapacitor) {
+                // For web, end call after shorter timeout since browser might be closing
+                backgroundTimeout = setTimeout(() => {
+                    if (isInActiveCall()) {
+                        console.log('📱 Page hidden too long - ending call');
+                        handleAppClose();
+                    }
+                }, 15000); // 15 seconds for web
+            }
+        } else if (document.visibilityState === 'visible') {
+            if (backgroundTimeout) {
+                clearTimeout(backgroundTimeout);
+                backgroundTimeout = null;
+            }
+        }
+    });
+    
+    // Handle page unload (browser closing/refresh)
+    window.addEventListener('beforeunload', (e) => {
+        if (isInActiveCall()) {
+            // Try to end call properly before page closes
+            handleAppClose();
+        }
+    });
+    
+    // Handle page being unloaded
+    window.addEventListener('pagehide', () => {
+        if (isInActiveCall()) {
+            handleAppClose();
+        }
+    });
+}
+
+// Initialize lifecycle handling
+setupAppLifecycleHandling();
+
 function showToast(message, type = 'info') {
     const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
@@ -1293,15 +1410,34 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
                         peerConnection.restartIce();
                     } catch (e) {
                         console.error('ICE restart failed:', e);
+                        showToast('Call ended - connection lost', 'error');
                         endWebRTCCall();
                     }
                 } else {
+                    showToast('Call ended - connection lost', 'error');
                     endWebRTCCall();
                 }
             }
             
-            if (peerConnection.connectionState === 'disconnected' || 
-                peerConnection.connectionState === 'closed') {
+            if (peerConnection.connectionState === 'disconnected') {
+                // Show status that we're trying to reconnect
+                console.log('🔌 Connection disconnected - waiting for reconnect...');
+                updateCallStatus('reconnecting');
+                
+                // Wait a bit to see if it reconnects, then end call
+                setTimeout(() => {
+                    if (peerConnection && 
+                        (peerConnection.connectionState === 'disconnected' || 
+                         peerConnection.connectionState === 'failed')) {
+                        console.log('🔌 Could not reconnect - ending call');
+                        showToast('Call ended - other party disconnected', 'info');
+                        endWebRTCCall();
+                    }
+                }, 5000); // 5 second grace period for reconnection
+            }
+            
+            if (peerConnection.connectionState === 'closed') {
+                showToast('Call ended', 'info');
                 endWebRTCCall();
             }
         };
@@ -1377,16 +1513,23 @@ function updateCallStatus(state) {
         switch(state) {
             case 'connecting':
                 statusEl.textContent = 'Connecting...';
+                statusEl.style.color = '#8696a0';
                 break;
             case 'connected':
                 statusEl.textContent = 'Connected';
                 statusEl.style.color = '#25d366';
                 break;
+            case 'reconnecting':
+                statusEl.textContent = 'Reconnecting...';
+                statusEl.style.color = '#f59e0b';
+                break;
             case 'disconnected':
                 statusEl.textContent = 'Disconnected';
+                statusEl.style.color = '#ef4444';
                 break;
             case 'failed':
                 statusEl.textContent = 'Connection failed';
+                statusEl.style.color = '#ef4444';
                 break;
             default:
                 statusEl.textContent = state;
