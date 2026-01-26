@@ -105,8 +105,8 @@ console.log('✅ Firebase Admin initialized');
 
   const COOKIE_OPTIONS = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: true, // Always secure for mobile/localhost
+    sameSite: 'none', // Allow cross-origin cookies
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: '/',
   };
