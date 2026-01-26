@@ -2277,9 +2277,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div style="color: #8696a0; font-size: 13px;">${contact.contactEmail}</div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 20px; align-items: center;">
+                <div style="display: flex; gap: 20px; align-items: center; position: relative;">
                     <i class="fas fa-phone call-btn" style="color: #25d366; font-size: 20px; cursor: pointer;"></i>
-                    <i class="fas fa-ellipsis-v" style="color: #8696a0; font-size: 20px; cursor: pointer;"></i>
+                    <div class="chat-menu-container">
+                        <i class="fas fa-ellipsis-v chat-menu-btn" style="color: #8696a0; font-size: 20px; cursor: pointer;"></i>
+                        <div class="chat-dropdown-menu" id="chatDropdownMenu">
+                            ${isContact ? `
+                            <div class="chat-menu-item delete-contact-item" data-action="delete-contact">
+                                <i class="fas fa-user-minus"></i>
+                                <span>Delete Contact</span>
+                            </div>
+                            ` : ''}
+                            <div class="chat-menu-item" data-action="clear-chat">
+                                <i class="fas fa-broom"></i>
+                                <span>Clear Chat</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             ${!isContact ? `
@@ -2356,6 +2370,61 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             #addContactBtnInChat:hover {
                 background: #20bd5a !important;
+            }
+            /* Chat dropdown menu styles */
+            .chat-menu-container {
+                position: relative;
+            }
+            .chat-menu-btn:hover {
+                color: #e9edef;
+            }
+            .chat-dropdown-menu {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: 8px;
+                background: #233138;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+                min-width: 180px;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-10px);
+                transition: all 0.2s ease;
+                z-index: 1001;
+                overflow: hidden;
+            }
+            .chat-dropdown-menu.active {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+            .chat-menu-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 16px;
+                color: #e9edef;
+                font-size: 14px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .chat-menu-item:hover {
+                background: #2a3942;
+            }
+            .chat-menu-item i {
+                width: 20px;
+                text-align: center;
+                color: #8696a0;
+            }
+            .chat-menu-item.delete-contact-item {
+                color: #f44336;
+            }
+            .chat-menu-item.delete-contact-item i {
+                color: #f44336;
+            }
+            .chat-menu-item.delete-contact-item:hover {
+                background: rgba(244, 67, 54, 0.1);
             }
             .chat-messages {
                 flex: 1;
@@ -2583,6 +2652,36 @@ document.addEventListener('DOMContentLoaded', async function() {
             selectedContact = null;
             // Reload contacts to refresh the list
             loadContacts();
+        });
+        
+        // Chat menu dropdown toggle
+        const menuBtn = chatView.querySelector('.chat-menu-btn');
+        const dropdownMenu = chatView.querySelector('.chat-dropdown-menu');
+        
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dropdownMenu.contains(e.target) && !menuBtn.contains(e.target)) {
+                dropdownMenu.classList.remove('active');
+            }
+        });
+        
+        // Handle menu item clicks
+        chatView.querySelectorAll('.chat-menu-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const action = item.dataset.action;
+                dropdownMenu.classList.remove('active');
+                
+                if (action === 'delete-contact') {
+                    showDeleteContactConfirm(contact, chatView, style);
+                } else if (action === 'clear-chat') {
+                    showToast('Clear chat coming soon', 'info');
+                }
+            });
         });
         
         // Add Contact button (if shown)
@@ -2950,6 +3049,187 @@ document.addEventListener('DOMContentLoaded', async function() {
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
             }
         }
+    }
+    
+    // ==================== DELETE CONTACT FUNCTIONS ====================
+    function showDeleteContactConfirm(contact, chatViewElement, styleElement) {
+        // Create confirmation modal
+        const modal = document.createElement('div');
+        modal.className = 'delete-contact-modal';
+        modal.innerHTML = `
+            <div class="delete-contact-backdrop"></div>
+            <div class="delete-contact-dialog">
+                <div class="delete-contact-icon">
+                    <i class="fas fa-user-minus"></i>
+                </div>
+                <h3>Delete Contact</h3>
+                <p>Are you sure you want to delete <strong>${contact.customName}</strong>?</p>
+                <p class="delete-warning">This will also remove you from their contacts.</p>
+                <div class="delete-contact-buttons">
+                    <button class="delete-contact-btn cancel" id="cancelDeleteContactBtn">Cancel</button>
+                    <button class="delete-contact-btn confirm" id="confirmDeleteContactBtn">Delete</button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal styles
+        const modalStyle = document.createElement('style');
+        modalStyle.textContent = `
+            .delete-contact-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .delete-contact-backdrop {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.6);
+            }
+            .delete-contact-dialog {
+                position: relative;
+                background: #1f2c33;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 320px;
+                width: 90%;
+                text-align: center;
+                animation: modalSlideIn 0.3s ease;
+            }
+            @keyframes modalSlideIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.9) translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1) translateY(0);
+                }
+            }
+            .delete-contact-icon {
+                width: 64px;
+                height: 64px;
+                border-radius: 50%;
+                background: rgba(244, 67, 54, 0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 16px;
+            }
+            .delete-contact-icon i {
+                font-size: 28px;
+                color: #f44336;
+            }
+            .delete-contact-dialog h3 {
+                color: #e9edef;
+                margin: 0 0 12px;
+                font-size: 18px;
+            }
+            .delete-contact-dialog p {
+                color: #8696a0;
+                margin: 0 0 8px;
+                font-size: 14px;
+                line-height: 1.5;
+            }
+            .delete-contact-dialog .delete-warning {
+                color: #f44336;
+                font-size: 13px;
+                margin-bottom: 20px;
+            }
+            .delete-contact-buttons {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+            }
+            .delete-contact-btn {
+                padding: 12px 24px;
+                border-radius: 24px;
+                border: none;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                min-width: 100px;
+            }
+            .delete-contact-btn.cancel {
+                background: #2a3942;
+                color: #e9edef;
+            }
+            .delete-contact-btn.cancel:hover {
+                background: #374952;
+            }
+            .delete-contact-btn.confirm {
+                background: #f44336;
+                color: white;
+            }
+            .delete-contact-btn.confirm:hover {
+                background: #d32f2f;
+            }
+            .delete-contact-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        `;
+        document.head.appendChild(modalStyle);
+        document.body.appendChild(modal);
+        
+        // Cancel button
+        document.getElementById('cancelDeleteContactBtn').addEventListener('click', () => {
+            modal.remove();
+            modalStyle.remove();
+        });
+        
+        // Backdrop click to close
+        modal.querySelector('.delete-contact-backdrop').addEventListener('click', () => {
+            modal.remove();
+            modalStyle.remove();
+        });
+        
+        // Confirm delete
+        document.getElementById('confirmDeleteContactBtn').addEventListener('click', async () => {
+            const confirmBtn = document.getElementById('confirmDeleteContactBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            
+            try {
+                const response = await fetch(`https://lockin-production.up.railway.app/contacts/${encodeURIComponent(contact.contactEmail)}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    modal.remove();
+                    modalStyle.remove();
+                    
+                    // Close the chat view
+                    if (chatViewElement) chatViewElement.remove();
+                    if (styleElement) styleElement.remove();
+                    selectedContact = null;
+                    
+                    showToast('Contact deleted', 'success');
+                    loadContacts();
+                } else {
+                    showToast(result.message || 'Failed to delete contact', 'error');
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = 'Delete';
+                }
+            } catch (error) {
+                console.error('Delete contact error:', error);
+                showToast('Failed to delete contact', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Delete';
+            }
+        });
     }
     
     // ==================== TYPING INDICATOR UI ====================

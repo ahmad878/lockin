@@ -953,7 +953,7 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
-  // Delete a contact
+  // Delete a contact (mutual deletion - also removes you from their contacts)
   app.delete('/contacts/:contactEmail', async function(req, res) {
     try {
       const token = req.cookies[COOKIE_NAME];
@@ -993,6 +993,15 @@ app.post('/register-fcm-token', async function(req, res) {
       }
 
       await user.save();
+
+      // Also remove current user from the other person's contacts (mutual deletion)
+      const otherUser = await User.findOne({ email: contactEmail });
+      if (otherUser) {
+        const currentUserEmail = user.email.toLowerCase();
+        otherUser.contacts = otherUser.contacts.filter(c => c.contactEmail !== currentUserEmail);
+        await otherUser.save();
+        console.log(`✅ Mutual deletion: Also removed ${currentUserEmail} from ${contactEmail}'s contacts`);
+      }
 
       console.log(`✅ Contact deleted: ${contactEmail} for user ${decoded.id}`);
 
