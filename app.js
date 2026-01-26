@@ -369,7 +369,7 @@ console.log('✅ Firebase Admin initialized');
   // ===== Socket.IO Setup =====
   const io = new Server(server, {
     cors: {
-      origin: ["http://localhost:3000", "https://lockin-production.up.railway.app"],
+      origin: ["http://localhost:3000", "https://localhost", "capacitor://localhost", "https://lockin-production.up.railway.app"],
       methods: ["GET", "POST"],
       credentials: true
     },
