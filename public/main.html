@@ -888,18 +888,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         reconnectionAttempts: 5
     });
 
+    function registerUserWithSocket() {
+        if (currentUserId && socket && socket.connected) {
+            socket.emit('register-user', currentUserId);
+            console.log('✅ User registered with socket:', currentUserId);
+        } else {
+            console.warn('⚠️ Cannot register user: missing currentUserId or socket not connected');
+        }
+    }
+
     socket.on('connect', function() {
         console.log('✅ Socket.IO connected:', socket.id);
-        
-        socket.emit('register-user', currentUserId);
-        console.log('✅ User registered with socket:', currentUserId);
-        
+        registerUserWithSocket();
         // Check if there's accepted call data from Android IncomingCallActivity
         if (window.acceptedCallData) {
             console.log('📞 Found pending accepted call data:', window.acceptedCallData);
             handleAcceptedCall(window.acceptedCallData);
             window.acceptedCallData = null;
         }
+    });
+
+    socket.on('reconnect', function() {
+        console.log('🔄 Socket.IO reconnected:', socket.id);
+        registerUserWithSocket();
     });
 
     // Handle accepted call from Android native IncomingCallActivity
