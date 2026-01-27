@@ -2371,22 +2371,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isOutgoing = call.type === 'outgoing';
             const isMissed = call.status === 'missed' || call.type === 'missed';
             const isRejected = call.status === 'rejected';
-            
+
             // Determine the other party (who we called or who called us)
             const otherPartyName = isOutgoing ? call.receiverName : call.callerName;
             const otherPartyEmail = isOutgoing ? call.receiverEmail : call.callerEmail;
             const otherPartyId = isOutgoing ? call.receiverId : call.callerId;
-            
+
             // Format timestamp
             const callDate = new Date(call.timestamp);
             const today = new Date();
             const isToday = callDate.toDateString() === today.toDateString();
             const timeStr = callDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dateStr = isToday ? timeStr : callDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + timeStr;
-            
+
             // Format duration
             const durationStr = call.duration > 0 ? formatDuration(call.duration) : '';
-            
+
             // Call icon and color
             let iconClass, iconColor;
             if (isMissed) {
@@ -2402,9 +2402,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 iconClass = 'fa-phone-arrow-down-left';
                 iconColor = '#25d366';
             }
-            
+
             const initial = (otherPartyName || 'U').charAt(0).toUpperCase();
-            
+
+            // Fix: define lastMsgTime for call history (use dateStr for call time)
+            const lastMsgTime = dateStr;
+
             return `
                 <div class="chat-item call-item" data-user-id="${otherPartyId}" data-user-email="${otherPartyEmail}" data-user-name="${otherPartyName || 'Unknown'}">
                     <div class="chat-avatar">${initial}</div>
