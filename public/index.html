@@ -2059,18 +2059,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     const waitForAuth = setInterval(async () => {
         if (window.userAuthenticated && window.userData) {
             clearInterval(waitForAuth);
-            
             currentUserId = window.userData.id;
             currentUserName = window.userData.fullname;
             currentUserEmail = window.userData.email;
             console.log('✅ User loaded:', currentUserId, currentUserName);
-            
             // Setup push notifications AFTER we have user ID
             if (!isInitialized) {
                 await setupPushNotifications();
                 await requestPushNotificationPermission();
                 loadContacts(); // Load user's contacts
                 isInitialized = true;
+            }
+            // Register user with socket if socket is already connected
+            if (socket && socket.connected) {
+                registerUserWithSocket();
             }
         }
     }, 100);
