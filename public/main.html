@@ -974,6 +974,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 },
                 body: JSON.stringify({
                     toEmail: email,
+                    fromEmail: userData.email, // Ensure caller email is sent
                     fromUserId: currentUserId,
                     fromName: currentUserName || 'Someone'
                 }),
