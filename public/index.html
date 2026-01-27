@@ -1332,14 +1332,12 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
             // Handle disconnected state - give it a moment then try restart
             if (peerConnection.iceConnectionState === 'disconnected') {
                 setTimeout(() => {
-                    if (peerConnection && peerConnection.iceConnectionState === 'disconnected' && iceRetryCount < MAX_ICE_RETRIES) {
-                        iceRetryCount++;
-                        console.log(`🔄 ICE disconnected, attempting restart ${iceRetryCount}/${MAX_ICE_RETRIES}`);
-                        try {
-                            peerConnection.restartIce();
-                        } catch (e) {
-                            console.error('ICE restart failed:', e);
-                        }
+                    if (peerConnection && 
+                        (peerConnection.connectionState === 'disconnected' || 
+                         peerConnection.connectionState === 'failed')) {
+                        console.log('🔌 Could not reconnect - ending call');
+                        showToast('Call ended - other party disconnected', 'info');
+                        endWebRTCCall();
                     }
                 }, 2000);
             }
@@ -2411,15 +2409,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div class="chat-info">
                         <div class="chat-header">
                             <div class="chat-name" style="${isMissed || isRejected ? 'color: #f44336;' : ''}">${otherPartyName || otherPartyEmail || 'Unknown'}</div>
-                            <div class="chat-time">${dateStr}</div>
+                            ${lastMsgTime ? `<div class="chat-time">${lastMsgTime}</div>` : ''}
                         </div>
                         <div class="chat-preview" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fas ${iconClass}" style="color: ${iconColor}; font-size: 12px;"></i>
                             <span>${isOutgoing ? 'Outgoing' : 'Incoming'}${durationStr ? ' · ' + durationStr : ''}${isMissed ? ' · Missed' : ''}${isRejected ? ' · Declined' : ''}</span>
                         </div>
-                    </div>
-                    <div class="call-action" style="padding: 10px; cursor: pointer;">
-                        <i class="fas fa-phone" style="color: #25d366; font-size: 18px;"></i>
                     </div>
                 </div>
             `;
@@ -3181,19 +3176,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             wrapper.dataset.messageIndex = index;
             
             const bubble = document.createElement('div');
-            bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}${isDeleted ? ' message-deleted' : ''}`;
-            
-            if (isDeleted) {
-                bubble.innerHTML = `
-                    <div class="message-content"><i class="fas fa-ban"></i> This message was deleted</div>
-                    <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-                `;
-            } else {
-                bubble.innerHTML = `
-                    <div>${msg.message}</div>
-                    <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
-                `;
-            }
+            bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
+            bubble.innerHTML = `
+                <div>${msg.message}</div>
+                <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+            `;
             
             wrapper.appendChild(bubble);
             
@@ -3718,13 +3705,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         reconnectionAttempts: 5
     });
 
-    socket.on('connect', function() {
-        console.log('✅ Socket.IO connected:', socket.id);
-        if (currentUserId) {
+    function registerUserWithSocket() {
+        if (currentUserId && socket && socket.connected) {
             socket.emit('register-user', currentUserId);
             console.log('✅ User registered with socket:', currentUserId);
+        } else {
+            console.warn('⚠️ Cannot register user: missing currentUserId or socket not connected');
         }
-        
+    }
+
+    socket.on('connect', function() {
+        console.log('✅ Socket.IO connected:', socket.id);
+        registerUserWithSocket();
         // Check if there's accepted call data from Android IncomingCallActivity
         if (window.acceptedCallData) {
             console.log('📞 Found pending accepted call data from Android:', window.acceptedCallData);
@@ -3780,7 +3772,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Start WebRTC as the receiver
         console.log('🎙️ Starting WebRTC call as receiver with:', callData.callerId);
-        startWebRTCCall(callData.callerId, false, callData.callerName || 'Unknown');
+        startWebRTCCall(callData.fromUserId, false, callData.fromName || callData.callerName || 'Unknown');
     };
 
     socket.on('incoming-call', async function(callData) {
