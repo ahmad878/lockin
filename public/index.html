@@ -2852,6 +2852,30 @@ document.addEventListener('DOMContentLoaded', async function() {
                 margin-top: 4px;
                 text-align: right;
             }
+            .message-footer {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 4px;
+                margin-top: 4px;
+            }
+            .message-footer .message-time {
+                margin: 0;
+            }
+            /* Read status indicators */
+            .sent-tick, .delivered-ticks, .read-ticks {
+                font-size: 12px;
+                margin-left: 2px;
+            }
+            .sent-tick {
+                color: #8696a0; /* Gray for sent */
+            }
+            .delivered-ticks {
+                color: #8696a0; /* Gray for delivered */
+            }
+            .read-ticks {
+                color: #00a884; /* Blue for read */
+            }
             .messages-container {
                 display: flex;
                 flex-direction: column;
@@ -3153,6 +3177,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await response.json();
                 if (result.success && result.chat && result.chat.messages.length > 0) {
                     displayMessages(result.chat.messages, contact);
+                    
+                    // Mark messages as read when chat is opened
+                    if (socket && socket.connected) {
+                        socket.emit('mark-messages-read', {
+                            fromUserId: currentUserId,
+                            contactUserId: contact.contactUserId
+                        });
+                        console.log('👁️ Marked messages as read for:', contact.contactUserId);
+                    }
                 }
             }
         } catch (error) {
@@ -3182,9 +3215,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             const bubble = document.createElement('div');
             bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
+            
+            // Add read status for sent messages
+            let readStatus = '';
+            if (isSent && !isDeleted) {
+                if (msg.read) {
+                    readStatus = '<i class="fas fa-check-double read-ticks"></i>';
+                } else if (msg.delivered) {
+                    readStatus = '<i class="fas fa-check-double delivered-ticks"></i>';
+                } else {
+                    readStatus = '<i class="fas fa-check sent-tick"></i>';
+                }
+            }
+            
             bubble.innerHTML = `
                 <div>${msg.message}</div>
-                <div class="message-time">${formatMessageTime(msg.timestamp)}</div>
+                <div class="message-footer">
+                    <span class="message-time">${formatMessageTime(msg.timestamp)}</span>
+                    ${readStatus}
+                </div>
             `;
             
             wrapper.appendChild(bubble);
@@ -3251,9 +3300,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const bubble = document.createElement('div');
         bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
+        
+        // Add read status for sent messages
+        let readStatus = '';
+        if (isSent) {
+            if (message.read) {
+                readStatus = '<i class="fas fa-check-double read-ticks"></i>';
+            } else if (message.delivered) {
+                readStatus = '<i class="fas fa-check-double delivered-ticks"></i>';
+            } else {
+                readStatus = '<i class="fas fa-check sent-tick"></i>';
+            }
+        }
+        
         bubble.innerHTML = `
             <div>${message.message}</div>
-            <div class="message-time">${formatMessageTime(message.timestamp)}</div>
+            <div class="message-footer">
+                <span class="message-time">${formatMessageTime(message.timestamp)}</span>
+                ${readStatus}
+            </div>
         `;
         
         wrapper.appendChild(bubble);
@@ -3938,6 +4003,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Refresh the contacts/chats list to update last message preview
         loadContacts();
+    });
+    
+    // ===== Messages Read Event =====
+    socket.on('messages-read', function(data) {
+        console.log('👁️ Messages marked as read by:', data.fromUserId);
+        
+        // Only update if we're currently in a chat with this person
+        if (selectedContact && selectedContact.contactUserId === data.fromUserId) {
+            const messagesDiv = document.getElementById('messagesDiv');
+            if (messagesDiv) {
+                // Update all sent message read status indicators
+                const sentMessages = messagesDiv.querySelectorAll('.message-wrapper.sent .message-bubble');
+                sentMessages.forEach(bubble => {
+                    const footer = bubble.querySelector('.message-footer');
+                    if (footer) {
+                        // Replace any existing read status with blue ticks
+                        const existingTicks = footer.querySelector('.sent-tick, .delivered-ticks, .read-ticks');
+                        if (existingTicks) {
+                            existingTicks.className = 'fas fa-check-double read-ticks';
+                        }
+                    }
+                });
+            }
+        }
     });
     
     // ===== Typing Indicator Events =====

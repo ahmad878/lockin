@@ -1920,7 +1920,6 @@ app.post('/register-fcm-token', async function(req, res) {
             senderId: fromUserId
           };
           existingChat.updatedAt = new Date();
-          await existingChat.save();
           console.log('✅ Message added to existing chat');
         } else {
           // Create new chat - normalize emails to lowercase
@@ -1949,6 +1948,9 @@ app.post('/register-fcm-token', async function(req, res) {
         // Send message to recipient if they're online
         const recipientSocketId = userSocketMap.get(toUserId);
         if (recipientSocketId) {
+          // Mark message as delivered since recipient is online
+          newMessage.delivered = true;
+          
           io.to(recipientSocketId).emit('new-message', {
             fromUserId: fromUserId,
             fromName: fromName,
@@ -1957,7 +1959,10 @@ app.post('/register-fcm-token', async function(req, res) {
           });
           console.log('📨 Message sent to recipient socket');
         } else {
-          // Recipient is OFFLINE - send FCM notification if not already notified
+          // Recipient is OFFLINE - message remains undelivered
+          console.log('📱 Recipient offline, message not delivered yet');
+          
+          // Send FCM notification if not already notified
           // Check if we already sent a notification from this sender
           let pendingFromSenders = pendingMessageNotifications.get(toUserId);
           if (!pendingFromSenders) {
@@ -2032,6 +2037,11 @@ app.post('/register-fcm-token', async function(req, res) {
           }
         }
         
+        // Save the chat after setting delivered status
+        if (existingChat) {
+          await existingChat.save();
+        }
+        
       } catch (error) {
         console.error('❌ Chat message error:', error);
       }
@@ -2088,6 +2098,47 @@ app.post('/register-fcm-token', async function(req, res) {
         io.to(recipientSocketId).emit("user-stop-typing", {
           fromUserId: fromUserId
         });
+      }
+    });
+
+    // ===== Mark Messages as Read Handler =====
+    socket.on("mark-messages-read", async (data) => {
+      try {
+        const { fromUserId, contactUserId } = data;
+        console.log('👁️ Marking messages as read:', { fromUserId, contactUserId });
+        
+        // Find the chat between these users
+        const chat = await Chat.findOne({
+          $or: [
+            { 'person1.userId': fromUserId, 'person2.userId': contactUserId },
+            { 'person1.userId': contactUserId, 'person2.userId': fromUserId }
+          ]
+        });
+        
+        if (chat) {
+          // Update all unread messages from the contact to the current user as read
+          const updateResult = await Chat.updateOne(
+            { _id: chat._id, 'messages.senderId': contactUserId, 'messages.read': false },
+            { $set: { 'messages.$[elem].read': true } },
+            { 
+              arrayFilters: [{ 'elem.senderId': contactUserId, 'elem.read': false }],
+              multi: true
+            }
+          );
+          
+          console.log(`✅ Marked ${updateResult.modifiedCount} messages as read`);
+          
+          // Notify the sender that their messages have been read
+          const senderSocketId = userSocketMap.get(contactUserId);
+          if (senderSocketId) {
+            io.to(senderSocketId).emit('messages-read', {
+              fromUserId: fromUserId
+            });
+            console.log('📤 Notified sender that messages were read');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error marking messages as read:', error);
       }
     });
 
