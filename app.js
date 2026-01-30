@@ -1,4 +1,4 @@
-  require('dotenv').config();
+require('dotenv').config();
 
   const express = require("express");
   const http = require("http");
@@ -378,9 +378,7 @@ console.log('✅ Firebase Admin initialized');
 
   // ===== CORS Configuration =====
   app.use(cors({
-    origin: ["http://localhost:3000", "https://localhost", "capacitor://localhost", "https://lockin-production.up.railway.app"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: true,
     credentials: true
   }));
 
