@@ -274,9 +274,26 @@ console.log('✅ Firebase Admin initialized');
         type: String,
         required: true
       },
+      messageType: {
+        type: String,
+        enum: ['text', 'voice'],
+        default: 'text'
+      },
       message: {
         type: String,
-        required: true
+        required: function() {
+          return this.messageType === 'text';
+        }
+      },
+      voiceUrl: {
+        type: String,
+        required: function() {
+          return this.messageType === 'voice';
+        }
+      },
+      voiceDuration: {
+        type: Number,
+        default: 0
       },
       timestamp: {
         type: Date,
@@ -1780,6 +1797,58 @@ app.post('/register-fcm-token', async function(req, res) {
   });
 
   // ========================================
+  // VOICE MESSAGE UPLOAD ROUTE
+  // ========================================
+
+  app.post("/upload-voice", upload.single("voice"), async (req, res) => {
+    console.log("====== UPLOAD VOICE MESSAGE REQUEST ======");
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No voice file uploaded"
+        });
+      }
+
+      const uploadToCloudinary = () => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "chat-voice-messages",
+              resource_type: "video", // Cloudinary uses 'video' for audio files
+              format: "mp3"
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+
+          uploadStream.end(req.file.buffer);
+        });
+      };
+
+      const result = await uploadToCloudinary();
+
+      console.log("✅ Voice message uploaded to Cloudinary");
+
+      res.json({
+        success: true,
+        url: result.secure_url,
+        public_id: result.public_id,
+        duration: result.duration || 0
+      });
+    } catch (err) {
+      console.error("❌ Voice upload error:", err);
+      res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
+  });
+
+  // ========================================
   // SOCKET.IO CALL SIGNALING (WhatsApp Style)
   // ========================================
 
@@ -1942,11 +2011,24 @@ app.post('/register-fcm-token', async function(req, res) {
       try {
         console.log('💬 Chat message received:', data);
         
-        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, timestamp } = data;
+        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, messageType, voiceUrl, voiceDuration, timestamp } = data;
         
-        if (!fromUserId || !toUserId || !message) {
-          console.error('Invalid chat data');
+        if (!fromUserId || !toUserId) {
+          console.error('Invalid chat data: missing user IDs');
           return;
+        }
+
+        // Validate based on message type
+        if (messageType === 'voice') {
+          if (!voiceUrl) {
+            console.error('Invalid voice message: missing voiceUrl');
+            return;
+          }
+        } else {
+          if (!message) {
+            console.error('Invalid text message: missing message');
+            return;
+          }
         }
         
         // Check if chat already exists between these two users
@@ -1961,17 +2043,28 @@ app.post('/register-fcm-token', async function(req, res) {
         const newMessage = {
           senderId: fromUserId,
           receiverId: toUserId,
-          message: message,
+          messageType: messageType || 'text',
           timestamp: timestamp || new Date(),
           read: false,
           delivered: false
         };
+
+        // Add message content based on type
+        if (messageType === 'voice') {
+          newMessage.voiceUrl = voiceUrl;
+          newMessage.voiceDuration = voiceDuration || 0;
+        } else {
+          newMessage.message = message;
+        }
+
+        // Prepare last message preview
+        const lastMessageText = messageType === 'voice' ? '🎤 Voice message' : message;
         
         if (existingChat) {
           // Add message to existing chat
           existingChat.messages.push(newMessage);
           existingChat.lastMessage = {
-            message: message,
+            message: lastMessageText,
             timestamp: newMessage.timestamp,
             senderId: fromUserId
           };
@@ -1992,7 +2085,7 @@ app.post('/register-fcm-token', async function(req, res) {
             },
             messages: [newMessage],
             lastMessage: {
-              message: message,
+              message: lastMessageText,
               timestamp: newMessage.timestamp,
               senderId: fromUserId
             }
@@ -2007,12 +2100,22 @@ app.post('/register-fcm-token', async function(req, res) {
           // Mark message as delivered since recipient is online
           newMessage.delivered = true;
           
-          io.to(recipientSocketId).emit('new-message', {
+          const emitData = {
             fromUserId: fromUserId,
             fromName: fromName,
-            message: message,
-            timestamp: newMessage.timestamp
-          });
+            timestamp: newMessage.timestamp,
+            messageType: messageType || 'text'
+          };
+
+          // Add appropriate content based on type
+          if (messageType === 'voice') {
+            emitData.voiceUrl = voiceUrl;
+            emitData.voiceDuration = voiceDuration || 0;
+          } else {
+            emitData.message = message;
+          }
+
+          io.to(recipientSocketId).emit('new-message', emitData);
           console.log('📨 Message sent to recipient socket');
         } else {
           // Recipient is OFFLINE - message remains undelivered
@@ -2058,7 +2161,7 @@ app.post('/register-fcm-token', async function(req, res) {
               const fcmMessage = {
                 notification: {
                   title: `New message from ${displayName}`,
-                  body: message.length > 100 ? message.substring(0, 100) + '...' : message
+                  body: messageType === 'voice' ? '🎤 Voice message' : (message.length > 100 ? message.substring(0, 100) + '...' : message)
                 },
                 data: {
                   type: 'new-message',
