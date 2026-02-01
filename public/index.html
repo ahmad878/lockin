@@ -3971,6 +3971,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 senderId: data.fromUserId,
                 timestamp: data.timestamp
             }, false);
+            
+            // Mark the message as read since chat is open
+            if (socket && socket.connected) {
+                socket.emit('mark-messages-read', {
+                    fromUserId: currentUserId,
+                    contactUserId: data.fromUserId
+                });
+                console.log('👁️ Marked new message as read for:', data.fromUserId);
+            }
         } else {
             // Show notification toast
             showToast(`New message from ${data.fromName}`, 'info');
