@@ -366,7 +366,14 @@ console.log('✅ Firebase Admin initialized');
         "image/png",
         "image/webp",
         "image/gif",
-        "video/mp4"
+        "video/mp4",
+        // Audio types for voice messages
+        "audio/webm",
+        "audio/ogg",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/wav",
+        "audio/x-m4a"
       ];
       if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
