@@ -29,6 +29,7 @@ console.log('✅ Firebase Admin initialized');
   SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
   const COOKIE_NAME = 'auth_token';
   const cors = require("cors");
+  const rateLimit = require('express-rate-limit');
 
 
   // ===== MongoDB / Mongoose =====
@@ -400,6 +401,61 @@ console.log('✅ Firebase Admin initialized');
     next();
   });
 
+  // ===== Rate Limiting Configuration =====
+  
+  // Strict rate limiter for email sending (signup/verification)
+  const emailRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 3, // Max 3 emails per 15 minutes per IP
+    message: { 
+      success: false, 
+      message: 'Too many email requests. Please try again later.' 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Login rate limiter - prevents brute force attacks
+  const loginRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Max 5 login attempts per 15 minutes per IP
+    message: { 
+      success: false, 
+      message: 'Too many login attempts. Please try again in 15 minutes.' 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Verification code rate limiter
+  const verifyRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Max 10 verification attempts per 15 minutes per IP
+    message: { 
+      success: false, 
+      message: 'Too many verification attempts. Please try again later.' 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // General API rate limiter
+  const generalRateLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 60, // Max 60 requests per minute per IP
+    message: { 
+      success: false, 
+      message: 'Too many requests. Please slow down.' 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply general rate limiter to all routes
+  app.use(generalRateLimiter);
+
+  console.log('✅ Rate limiting enabled');
+
   // ===== Health Check Route =====
   app.get("/health", (req, res) => {
     res.json({
@@ -508,7 +564,7 @@ app.post('/register-fcm-token', async function(req, res) {
 
 
 
-  app.post('/signup', async function(req, res) {
+  app.post('/signup', emailRateLimiter, async function(req, res) {
     try {
       console.log('Received signup request:', req.body);
       const { fullName, email, password } = req.body;
@@ -643,7 +699,7 @@ app.post('/register-fcm-token', async function(req, res) {
       });
     }
   });
-  app.post('/verify', async function(req, res) {
+  app.post('/verify', verifyRateLimiter, async function(req, res) {
     try {
       const { code, email } = req.body;
       console.log('Verification attempt:', { code, email });
@@ -709,7 +765,7 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
-  app.post('/login', async function(req, res) {
+  app.post('/login', loginRateLimiter, async function(req, res) {
     try {
       const { email, password } = req.body;
       console.log('Login attempt:', email);
@@ -1447,7 +1503,7 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
- app.post('/send-message-notification', async function(req, res) {
+ app.post('/send-message-notification', emailRateLimiter, async function(req, res) {
   try {
     const { toEmail, fromUserId, fromName } = req.body;
     console.log('Send message notification request:', { toEmail, fromUserId, fromName });
