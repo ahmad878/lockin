@@ -276,7 +276,7 @@ console.log('✅ Firebase Admin initialized');
       },
       messageType: {
         type: String,
-        enum: ['text', 'voice'],
+        enum: ['text', 'voice', 'image'],
         default: 'text'
       },
       message: {
@@ -294,6 +294,12 @@ console.log('✅ Firebase Admin initialized');
       voiceDuration: {
         type: Number,
         default: 0
+      },
+      imageUrl: {
+        type: String,
+        required: function() {
+          return this.messageType === 'image';
+        }
       },
       timestamp: {
         type: Date,
@@ -2018,7 +2024,7 @@ app.post('/register-fcm-token', async function(req, res) {
       try {
         console.log('💬 Chat message received:', data);
         
-        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, messageType, voiceUrl, voiceDuration, timestamp } = data;
+        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, messageType, voiceUrl, voiceDuration, imageUrl, timestamp } = data;
         
         if (!fromUserId || !toUserId) {
           console.error('Invalid chat data: missing user IDs');
@@ -2029,6 +2035,11 @@ app.post('/register-fcm-token', async function(req, res) {
         if (messageType === 'voice') {
           if (!voiceUrl) {
             console.error('Invalid voice message: missing voiceUrl');
+            return;
+          }
+        } else if (messageType === 'image') {
+          if (!imageUrl) {
+            console.error('Invalid image message: missing imageUrl');
             return;
           }
         } else {
@@ -2060,12 +2071,19 @@ app.post('/register-fcm-token', async function(req, res) {
         if (messageType === 'voice') {
           newMessage.voiceUrl = voiceUrl;
           newMessage.voiceDuration = voiceDuration || 0;
+        } else if (messageType === 'image') {
+          newMessage.imageUrl = imageUrl;
         } else {
           newMessage.message = message;
         }
 
         // Prepare last message preview
-        const lastMessageText = messageType === 'voice' ? '🎤 Voice message' : message;
+        let lastMessageText = message;
+        if (messageType === 'voice') {
+          lastMessageText = '🎤 Voice message';
+        } else if (messageType === 'image') {
+          lastMessageText = '📷 Photo';
+        }
         
         if (existingChat) {
           // Add message to existing chat
@@ -2118,6 +2136,8 @@ app.post('/register-fcm-token', async function(req, res) {
           if (messageType === 'voice') {
             emitData.voiceUrl = voiceUrl;
             emitData.voiceDuration = voiceDuration || 0;
+          } else if (messageType === 'image') {
+            emitData.imageUrl = imageUrl;
           } else {
             emitData.message = message;
           }
