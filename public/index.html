@@ -4148,7 +4148,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // ==================== IMAGE MODAL ====================
-    function showImageModal(imageUrl) {
+    window.showImageModal = function(imageUrl) {
         // Create modal
         const modal = document.createElement('div');
         modal.className = 'image-modal';
@@ -4176,7 +4176,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         };
         document.addEventListener('keydown', escHandler);
-    }
+    };
 
     // ==================== TYPING INDICATOR UI ====================
     function showTypingIndicator() {
