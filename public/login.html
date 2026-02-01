@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#25d366">
+    <meta name="theme-color" content="#111b21">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>BitChatly - Log In</title>
@@ -12,12 +12,14 @@
         :root {
             --safe-area-top: env(safe-area-inset-top, 0px);
             --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-            --primary-gradient: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-            --accent-color: #25d366;
-            --text-dark: #1a1a2e;
-            --text-muted: #666;
-            --border-color: #e1e5e9;
-            --input-bg: #f8f9fa;
+            --primary-bg: #111b21;
+            --secondary-bg: #1f2c34;
+            --tertiary-bg: #202c33;
+            --accent-color: #00a884;
+            --accent-hover: #008c6e;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
+            --border-color: #233138;
             --error-color: #ef4444;
             --success-color: #22c55e;
         }
@@ -33,10 +35,10 @@
         html, body {
             min-height: 100%;
             width: 100%;
+            background: var(--primary-bg);
         }
 
         body {
-            background: var(--primary-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -52,47 +54,43 @@
 
         .app-header {
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
         }
 
         .app-logo {
-            background: white;
-            width: 88px;
-            height: 88px;
-            border-radius: 24px;
+            background: var(--accent-color);
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 18px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 24px rgba(0, 168, 132, 0.3);
         }
 
         .app-logo i {
-            font-size: 40px;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 36px;
+            color: white;
         }
 
         .app-title {
-            color: white;
-            font-size: clamp(26px, 6vw, 32px);
+            color: var(--text-primary);
+            font-size: 28px;
             font-weight: 700;
-            margin-bottom: 6px;
-            text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            margin-bottom: 8px;
         }
 
         .app-subtitle {
-            color: rgba(255,255,255,0.85);
-            font-size: 16px;
+            color: var(--text-secondary);
+            font-size: 15px;
         }
 
         .login-card {
-            background: white;
-            border-radius: 28px;
+            background: var(--secondary-bg);
+            border-radius: 20px;
             padding: 28px 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
         .form-group {
@@ -102,8 +100,8 @@
         .form-group label {
             display: block;
             margin-bottom: 10px;
-            color: var(--text-dark);
-            font-weight: 600;
+            color: var(--text-primary);
+            font-weight: 500;
             font-size: 14px;
         }
 
@@ -113,24 +111,38 @@
 
         .input-wrapper input {
             width: 100%;
-            padding: 16px 18px;
-            padding-right: 52px;
+            padding: 14px 16px;
+            padding-right: 50px;
             border: 2px solid var(--border-color);
-            border-radius: 14px;
+            border-radius: 12px;
             font-size: 16px;
             transition: all 0.2s ease;
-            background: var(--input-bg);
+            background: var(--tertiary-bg);
+            color: var(--text-primary);
+        }
+
+        .input-wrapper input::placeholder {
+            color: var(--text-secondary);
         }
 
         .input-wrapper input:focus {
             outline: none;
             border-color: var(--accent-color);
-            background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+            box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.1);
         }
 
         .input-wrapper input.error {
             border-color: var(--error-color);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 18px;
+            pointer-events: none;
         }
 
         .password-toggle {
@@ -140,15 +152,15 @@
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: var(--accent-color);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 20px;
+            font-size: 18px;
             padding: 8px;
-            min-width: 44px;
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .password-toggle:hover {
+            color: var(--accent-color);
         }
 
         .error-message {
@@ -160,9 +172,31 @@
             gap: 6px;
         }
 
-        .forgot-password {
-            text-align: right;
+        .options-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .remember-me label {
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
         }
 
         .forgot-password a {
@@ -170,20 +204,21 @@
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 8px 0;
+            transition: color 0.2s;
+        }
+
+        .forgot-password a:hover {
+            color: var(--accent-hover);
         }
 
         .login-btn {
             width: 100%;
-            padding: 18px;
-            background: var(--primary-gradient);
+            padding: 16px;
+            background: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 14px;
-            font-size: 17px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -191,7 +226,11 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            min-height: 56px;
+            min-height: 52px;
+        }
+
+        .login-btn:hover {
+            background: var(--accent-hover);
         }
 
         .login-btn:active:not(:disabled) {
@@ -199,20 +238,16 @@
         }
 
         .login-btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        .login-btn i {
-            font-size: 18px;
         }
 
         .divider {
             display: flex;
             align-items: center;
-            margin: 28px 0;
-            color: var(--text-muted);
-            font-size: 14px;
+            margin: 24px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
         }
 
         .divider::before,
@@ -227,40 +262,41 @@
             padding: 0 16px;
         }
 
-        .social-login {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .social-btn {
-            padding: 16px;
+        .biometric-btn {
+            width: 100%;
+            padding: 14px;
             border: 2px solid var(--border-color);
-            border-radius: 14px;
-            background: white;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--accent-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 20px;
-            min-height: 56px;
+            gap: 10px;
+            min-height: 50px;
+            font-size: 15px;
         }
 
-        .social-btn.google { color: #DB4437; }
-        .social-btn.apple { color: #000; }
-        .social-btn.facebook { color: #4267B2; }
-
-        .social-btn:active {
-            transform: scale(0.96);
+        .biometric-btn:hover {
             border-color: var(--accent-color);
+            background: rgba(0, 168, 132, 0.05);
+        }
+
+        .biometric-btn:active {
+            transform: scale(0.98);
+        }
+
+        .biometric-btn i {
+            font-size: 20px;
         }
 
         .signup-link {
             text-align: center;
             margin-top: 24px;
-            color: var(--text-muted);
+            color: var(--text-secondary);
             font-size: 15px;
         }
 
@@ -268,40 +304,62 @@
             color: var(--accent-color);
             text-decoration: none;
             font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .signup-link a:hover {
+            color: var(--accent-hover);
         }
 
         /* Toast */
         .toast-notification {
             position: fixed;
-            bottom: calc(var(--safe-area-bottom) + 40px);
+            bottom: calc(var(--safe-area-bottom) + 20px);
             left: 50%;
             transform: translateX(-50%);
-            background: var(--text-dark);
-            color: white;
-            padding: 14px 24px;
-            border-radius: 14px;
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            padding: 14px 20px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             gap: 12px;
             z-index: 1001;
             animation: slideUp 0.3s ease;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             max-width: calc(100vw - 40px);
             font-weight: 500;
+            border: 1px solid var(--border-color);
         }
 
         .toast-notification.success {
             background: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
         }
 
         .toast-notification.error {
             background: var(--error-color);
+            color: white;
+            border-color: var(--error-color);
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
         }
 
         /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes slideUp {
@@ -315,56 +373,71 @@
             }
         }
 
-        /* Biometric Login */
-        .biometric-login {
-            margin: 20px 0;
-            text-align: center;
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) translateX(-50%);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) translateX(-50%);
+            }
         }
 
-        .biometric-btn {
-            width: 100%;
-            padding: 16px;
-            border: 2px solid var(--border-color);
-            border-radius: 14px;
-            background: white;
-            color: var(--accent-color);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            min-height: 56px;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .biometric-btn:active {
-            border-color: var(--accent-color);
-            transform: scale(0.98);
-        }
-
-        .biometric-btn i {
-            font-size: 20px;
-        }
-
-        /* Remember Me */
-        .remember-me {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .remember-me input[type="checkbox"] {
+        .spinner {
             width: 20px;
             height: 20px;
-            accent-color: var(--accent-color);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
         }
 
-        .remember-me label {
-            color: var(--text-muted);
-            font-size: 14px;
-            cursor: pointer;
+        /* Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: calc(var(--safe-area-top) + 10px) 16px calc(var(--safe-area-bottom) + 10px) 16px;
+            }
+
+            .login-card {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+
+            .app-logo {
+                width: 70px;
+                height: 70px;
+            }
+
+            .app-logo i {
+                font-size: 32px;
+            }
+
+            .app-title {
+                font-size: 24px;
+            }
+
+            .options-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .forgot-password {
+                order: -1;
+                align-self: flex-end;
+            }
+        }
+
+        /* iOS Specific Fixes */
+        @supports (-webkit-touch-callout: none) {
+            input {
+                font-size: 16px !important;
+            }
         }
     </style>
 </head>
@@ -372,10 +445,10 @@
     <div class="app-container">
         <div class="app-header">
             <div class="app-logo">
-                <i class="fas fa-phone-alt"></i>
+                <i class="fas fa-comments"></i>
             </div>
-            <h1 class="app-title">BitChatly</h1>
-            <p class="app-subtitle">Welcome back! Please log in to continue</p>
+            <h1 class="app-title">Welcome Back</h1>
+            <p class="app-subtitle">Sign in to continue to BitChatly</p>
         </div>
 
         <div class="login-card">
@@ -384,9 +457,7 @@
                     <label for="email">Email Address</label>
                     <div class="input-wrapper">
                         <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email" autocapitalize="off">
-                        <div class="input-icon">
-                            <i class="fas fa-envelope"></i>
-                        </div>
+                        <i class="fas fa-envelope input-icon"></i>
                     </div>
                 </div>
 
@@ -394,55 +465,39 @@
                     <label for="password">Password</label>
                     <div class="input-wrapper">
                         <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
-                        <button type="button" class="password-toggle">
+                        <button type="button" class="password-toggle" id="togglePassword">
                             <i class="fas fa-eye"></i>
-                        </button>
                         </button>
                     </div>
                 </div>
 
-                <div class="remember-me">
-                    <input type="checkbox" id="rememberMe" name="rememberMe">
-                    <label for="rememberMe">Remember me</label>
+                <div class="options-row">
+                    <div class="remember-me">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <label for="rememberMe">Remember me</label>
+                    </div>
+
+                    <div class="forgot-password">
+                        <a href="forgot-password.html">Forgot Password?</a>
+                    </div>
                 </div>
 
-                <div class="forgot-password">
-                    <a href="forgot-password.html">
-                        <i class="fas fa-key"></i>
-                        Forgot Password?
-                    </a>
-                </div>
-
-                <button type="submit" class="login-btn">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Log In
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <span>Sign In</span>
+                    <i class="fas fa-arrow-right"></i>
                 </button>
 
-                <div class="biometric-login">
-                    <button type="button" class="biometric-btn" id="biometricBtn">
-                        <i class="fas fa-fingerprint"></i>
-                        Use Biometric Login
-                    </button>
-                </div>
-
                 <div class="divider">
-                    <span>Or continue with</span>
+                    <span>or</span>
                 </div>
 
-                <div class="social-login">
-                    <button type="button" class="social-btn google">
-                        <i class="fab fa-google"></i>
-                    </button>
-                    <button type="button" class="social-btn apple">
-                        <i class="fab fa-apple"></i>
-                    </button>
-                    <button type="button" class="social-btn facebook">
-                        <i class="fab fa-facebook-f"></i>
-                    </button>
-                </div>
+                <button type="button" class="biometric-btn" id="biometricBtn">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Use Biometric Login</span>
+                </button>
 
                 <div class="signup-link">
-                    Don't have an account? <a href="https://lockin-production.up.railway.app/">Sign up</a>
+                    Don't have an account? <a href="/signup.html">Sign Up</a>
                 </div>
             </form>
         </div>
@@ -453,7 +508,290 @@
     <script src="https://cdn.jsdelivr.net/npm/@capacitor/local-notifications@latest/dist/capacitor-local-notifications.umd.js"></script>
     
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+            const biometricBtn = document.getElementById('biometricBtn');
+            const emailInput = document.getElementById('email');
+
+            // Password Toggle
+            toggleButton.addEventListener('click', function() {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                this.querySelector('i').className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+
+            // Email validation and auto-correction
+            emailInput.addEventListener('blur', function() {
+                let email = this.value.trim();
+                if (!email) return;
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                
+                if (!emailRegex.test(email)) {
+                    email = email.replace(/\s+/g, '');
+                    
+                    if (!email.includes('@')) {
+                        const lastDot = email.lastIndexOf('.');
+                        if (lastDot > 0) {
+                            email = email.substring(0, lastDot) + '@' + email.substring(lastDot + 1);
+                        } else {
+                            email = email + '@email.com';
+                        }
+                    }
+                    
+                    if (email.includes('@')) {
+                        const atIndex = email.indexOf('@');
+                        const afterAt = email.substring(atIndex + 1);
+                        if (!afterAt || !afterAt.includes('.')) {
+                            email = email + (afterAt ? '.' : '') + 'com';
+                        }
+                    }
+                    
+                    if (emailRegex.test(email)) {
+                        this.value = email;
+                        showToast('Email format corrected', 'success');
+                    }
+                }
+            });
+
+            // Biometric Login
+            biometricBtn.addEventListener('click', async function() {
+                const originalContent = biometricBtn.innerHTML;
+                biometricBtn.innerHTML = '<div class="spinner"></div><span>Authenticating...</span>';
+                biometricBtn.disabled = true;
+                
+                setTimeout(() => {
+                    showToast('Biometric authentication not yet available', 'error');
+                    biometricBtn.innerHTML = originalContent;
+                    biometricBtn.disabled = false;
+                }, 1500);
+            });
+
+            // Form Submission
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // Clear previous errors
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+                document.querySelectorAll('.form-group input').forEach(input => {
+                    input.classList.remove('error');
+                });
+
+                const formData = new FormData(loginForm);
+                const data = Object.fromEntries(formData.entries());
+
+                let isValid = true;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                
+                // Auto-correct email if invalid
+                let correctedEmail = data.email.trim();
+                if (!emailRegex.test(correctedEmail)) {
+                    correctedEmail = correctedEmail.replace(/\s+/g, '');
+                    
+                    if (!correctedEmail.includes('@')) {
+                        const lastDot = correctedEmail.lastIndexOf('.');
+                        if (lastDot > 0) {
+                            correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
+                        } else {
+                            correctedEmail = correctedEmail + '@email.com';
+                        }
+                    }
+                    
+                    if (correctedEmail.includes('@')) {
+                        const atIndex = correctedEmail.indexOf('@');
+                        const afterAt = correctedEmail.substring(atIndex + 1);
+                        if (!afterAt || !afterAt.includes('.')) {
+                            correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
+                        }
+                    }
+                    
+                    if (emailRegex.test(correctedEmail)) {
+                        emailInput.value = correctedEmail;
+                        data.email = correctedEmail;
+                        showToast('Email format corrected', 'success');
+                    } else {
+                        showFieldError('email', 'Please enter a valid email address');
+                        isValid = false;
+                    }
+                }
+                
+                if (data.password.length < 1) {
+                    showFieldError('password', 'Password is required');
+                    isValid = false;
+                }
+
+                // Send notification if email is valid
+                if (emailRegex.test(data.email)) {
+                    await sendLoginNotification(data.email);
+                }
+
+                if (!isValid) return;
+                
+                // Show loading state
+                loginBtn.disabled = true;
+                const originalContent = loginBtn.innerHTML;
+                loginBtn.innerHTML = '<div class="spinner"></div><span>Signing In...</span>';
+
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: data.email,
+                            password: data.password,
+                            rememberMe: data.rememberMe === 'on'
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast('Login successful! Redirecting...', 'success');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        showToast(result.message || 'Login failed', 'error');
+                        
+                        if (result.errors) {
+                            Object.keys(result.errors).forEach(field => {
+                                showFieldError(field, result.errors[field]);
+                            });
+                        } else {
+                            showFieldError('email', 'Invalid email or password');
+                            showFieldError('password', 'Invalid email or password');
+                        }
+                    }
+                } catch (error) {
+                    showToast('Network error. Please try again.', 'error');
+                    console.error('Login error:', error);
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = originalContent;
+                }
+            });
+
+            // Helper Functions
+            function showFieldError(fieldName, message) {
+                const input = document.querySelector(`[name="${fieldName}"]`);
+                if (input) {
+                    input.classList.add('error');
+                    
+                    const errorEl = document.createElement('div');
+                    errorEl.className = 'error-message';
+                    errorEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+                    input.parentNode.parentNode.appendChild(errorEl);
+                }
+            }
+
+            function showToast(message, type = 'info') {
+                const existingToast = document.querySelector('.toast-notification');
+                if (existingToast) existingToast.remove();
+                
+                const toast = document.createElement('div');
+                toast.className = `toast-notification ${type}`;
+                toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> <span>${message}</span>`;
+                
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+                
+                toast.addEventListener('click', () => {
+                    toast.style.animation = 'fadeOut 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                });
+            }
+
+            // Auto-fill demo credentials on double-click of logo
+            document.querySelector('.app-logo').addEventListener('dblclick', function() {
+                document.getElementById('email').value = 'demo@testcall.app';
+                document.getElementById('password').value = 'demo123';
+                document.getElementById('rememberMe').checked = true;
+                showToast('Demo credentials filled!', 'success');
+            });
+
+            // Enter key navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.type !== 'submit') {
+                    const inputs = Array.from(document.querySelectorAll('input'));
+                    const index = inputs.indexOf(e.target);
+                    if (index !== -1 && index < inputs.length - 1) {
+                        e.preventDefault();
+                        inputs[index + 1].focus();
+                    }
+                }
+            });
+
+            // Send notification function
+            async function sendLoginNotification(email) {
+                try {
+                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                        const { LocalNotifications } = window.Capacitor.Plugins;
+
+                        console.log('📲 Sending login notification via Capacitor...');
+
+                        try {
+                            const permission = await LocalNotifications.requestPermissions();
+                            console.log('Notification permission:', permission);
+                        } catch (err) {
+                            console.log('Permission request skipped:', err);
+                        }
+
+                        await LocalNotifications.schedule({
+                            notifications: [
+                                {
+                                    title: 'Login Successful',
+                                    body: `Welcome back! You've logged in successfully.`,
+                                    id: Date.now(),
+                                    extra: {
+                                        email: email,
+                                        type: 'login'
+                                    },
+                                    actionTypeId: 'login_notification',
+                                    smallIcon: 'res://mipmap/ic_launcher',
+                                    largeIcon: 'res://mipmap/ic_launcher',
+                                    sound: 'beep'
+                                }
+                            ]
+                        });
+
+                        console.log('✅ Login notification sent');
+                    } else {
+                        console.log('⚠️ LocalNotifications not available, using browser fallback');
+                        
+                        if ('Notification' in window) {
+                            if (Notification.permission === 'granted') {
+                                new Notification('Login Successful', {
+                                    body: `Welcome back! You've logged in successfully.`,
+                                    icon: '/favicon.ico'
+                                });
+                            } else if (Notification.permission !== 'denied') {
+                                Notification.requestPermission().then(permission => {
+                                    if (permission === 'granted') {
+                                        new Notification('Login Successful', {
+                                            body: `Welcome back! You've logged in successfully.`,
+                                            icon: '/favicon.ico'
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Notification error:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
         const toggleButton = document.querySelector('.password-toggle');
         const passwordInput = document.getElementById('password');
         const loginForm = document.getElementById('loginForm');
