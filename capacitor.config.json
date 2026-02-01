@@ -1,6 +1,6 @@
 {
   "appId": "com.lockin.app",
-  "appName": "Lock In",
+  "appName": "BitChatly",
   "webDir": "public",
   "server": {
     "cleartext": true,

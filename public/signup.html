@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#25d366">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>WishTripper - Sign Up</title>
+    <title>BitChatly - Sign Up</title>
     <script>
         // Check if already authenticated - redirect to phone UI
         (async function() {
@@ -30,8 +30,8 @@
         :root {
             --safe-area-top: env(safe-area-inset-top, 0px);
             --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --accent-color: #667eea;
+            --primary-gradient: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            --accent-color: #25d366;
             --text-dark: #1a1a2e;
             --text-muted: #666;
             --border-color: #e1e5e9;
@@ -464,7 +464,7 @@
             <div class="app-logo">
                 <i class="fas fa-phone-alt"></i>
             </div>
-            <h1 class="app-title">WishTripper</h1>
+            <h1 class="app-title">BitChatly</h1>
             <p class="app-subtitle">Create your account to get started</p>
         </div>
 
@@ -499,13 +499,6 @@
                         <div class="strength-text">
                             <span>Password strength: <span class="strength-label">Very weak</span></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="confirmPassword">Confirm Password</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required autocomplete="new-password">
                     </div>
                 </div>
 
@@ -648,11 +641,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (data.password.length < 8) {
             showFieldError('password', 'Password must be at least 8 characters');
-            isValid = false;
-        }
-
-        if (data.password !== data.confirmPassword) {
-            showFieldError('confirmPassword', 'Passwords do not match');
             isValid = false;
         }
         
