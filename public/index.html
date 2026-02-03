@@ -4370,15 +4370,34 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (confirm('Do you want to logout?')) {
             try {
                 socket.disconnect();
+                
+                // Clear all local storage and session data
+                localStorage.clear();
+                sessionStorage.clear();
+                
                 await fetch('https://lockin-production.up.railway.app/logout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include'
                 });
-                window.location.href = '/signup.html';
+                
+                // For Capacitor/Android, use replace to prevent back navigation
+                if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+                    window.location.replace('/signup.html');
+                } else {
+                    window.location.href = '/signup.html';
+                }
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = '/signup.html';
+                // Clear storage even on error
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+                    window.location.replace('/signup.html');
+                } else {
+                    window.location.href = '/signup.html';
+                }
             }
         }
     });
