@@ -8,21 +8,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>BitChatly - Sign Up</title>
     <script>
-        // Clear logout flag if present (from logout flow)
-        if (sessionStorage.getItem('isLoggingOut') === 'true') {
-            console.log('🧹 Clearing logout flag on signup page');
-            sessionStorage.removeItem('isLoggingOut');
-            localStorage.clear(); // Ensure everything is cleared
-        }
-        
         // Check if already authenticated - redirect to phone UI
         (async function() {
-            // Don't check auth if we just logged out
+            // Check logout flag FIRST before doing anything
             const isLoggingOut = sessionStorage.getItem('isLoggingOut') === 'true';
+            
             if (isLoggingOut) {
-                console.log('🚪 Just logged out, staying on signup');
+                console.log('🚪 Just logged out, staying on signup page');
                 sessionStorage.removeItem('isLoggingOut');
-                return;
+                localStorage.clear();
+                return; // Stay on signup, don't check auth
             }
             
             try {
