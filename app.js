@@ -873,8 +873,8 @@ app.post('/register-fcm-token', async function(req, res) {
     // Clear the authentication cookie
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'none',
       path: '/'
     });
     
@@ -891,8 +891,8 @@ app.post('/register-fcm-token', async function(req, res) {
     // Even if there's an error, clear the cookie
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'none',
       path: '/'
     });
     
