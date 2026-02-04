@@ -511,8 +511,6 @@ console.log('✅ Firebase Admin initialized');
     });
   });
 
-let userLogoutTimestamps = new Map(); // Track when users logged out
-
   // ===== Auth Check Route =====
   app.post("/check", (req, res) => {
     const token = req.cookies[COOKIE_NAME];
@@ -531,17 +529,6 @@ let userLogoutTimestamps = new Map(); // Track when users logged out
         success: false,
         authenticated: false,
         message: 'Invalid or expired token'
-      });
-    }
-
-    // Check if user recently logged out (within last 10 seconds)
-    const logoutTime = userLogoutTimestamps.get(decoded.id);
-    if (logoutTime && Date.now() - logoutTime < 10000) {
-      console.log(`User ${decoded.id} just logged out, denying auth`);
-      return res.json({
-        success: false,
-        authenticated: false,
-        message: 'User just logged out'
       });
     }
 
@@ -888,9 +875,6 @@ app.post('/register-fcm-token', async function(req, res) {
     if (token) {
       const decoded = verifyToken(token);
       if (decoded && decoded.id) {
-        // Record logout timestamp to prevent immediate re-auth
-        userLogoutTimestamps.set(decoded.id, Date.now());
-        
         // Remove user from Socket.IO map
         userSocketMap.delete(decoded.id);
         // Remove FCM token from memory
@@ -901,17 +885,13 @@ app.post('/register-fcm-token', async function(req, res) {
       }
     }
     
-    // Clear the authentication cookie - with explicit options
+    // Clear the authentication cookie
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/',
-      domain: undefined // Allow cookie to be cleared regardless of domain
+      path: '/'
     });
-    
-    // Also try clearing with different domain options for Android
-    res.clearCookie(COOKIE_NAME);
     
     console.log('✅ Logout successful, cookie cleared');
     
@@ -930,8 +910,6 @@ app.post('/register-fcm-token', async function(req, res) {
       sameSite: 'strict',
       path: '/'
     });
-    
-    res.clearCookie(COOKIE_NAME);
     
     return res.status(200).json({
       success: true,

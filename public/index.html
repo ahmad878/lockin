@@ -14,18 +14,9 @@
         window.userData = null;
         
         (async function() {
-            // Skip auth check if logging out - use localStorage which persists better on Android
-            if (localStorage.getItem('isLoggingOut') === 'true') {
+            // Skip auth check if logging out
+            if (sessionStorage.getItem('isLoggingOut') === 'true') {
                 console.log('🚪 Logout in progress, skipping auth check');
-                localStorage.removeItem('isLoggingOut'); // Clean up flag
-                return;
-            }
-            
-            // Also check if user logged out recently (within last 15 seconds)
-            const lastLogoutTime = localStorage.getItem('lastLogoutTime');
-            if (lastLogoutTime && Date.now() - parseInt(lastLogoutTime) < 15000) {
-                console.log('🚪 User logged out recently, skipping auth check');
-                localStorage.removeItem('lastLogoutTime');
                 return;
             }
             
@@ -4390,25 +4381,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     settingsNav.addEventListener('click', async () => {
         if (confirm('Do you want to logout?')) {
             try {
-                // Set logout flags FIRST
-                localStorage.setItem('isLoggingOut', 'true');
-                localStorage.setItem('lastLogoutTime', Date.now().toString());
+                // Set logout flag FIRST to prevent auth re-check
                 sessionStorage.setItem('isLoggingOut', 'true');
                 
                 socket.disconnect();
                 
                 // Clear all local storage and session data
-                localStorage.removeItem('userDataCache'); // Remove other cached data
-                sessionStorage.clear();
+                localStorage.clear();
                 
-                // Wait for logout to complete
-                const response = await fetch('https://lockin-production.up.railway.app/logout', {
+                await fetch('https://lockin-production.up.railway.app/logout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include'
                 });
-                
-                console.log('Logout response:', response.status);
                 
                 // For Capacitor/Android, use replace to prevent back navigation
                 if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
@@ -4419,12 +4404,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             } catch (error) {
                 console.error('Logout error:', error);
                 // Set logout flag even on error
-                localStorage.setItem('isLoggingOut', 'true');
-                localStorage.setItem('lastLogoutTime', Date.now().toString());
                 sessionStorage.setItem('isLoggingOut', 'true');
                 // Clear storage
-                localStorage.removeItem('userDataCache');
-                sessionStorage.clear();
+                localStorage.clear();
                 
                 if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
                     window.location.replace('/signup.html');
