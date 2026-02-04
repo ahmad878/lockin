@@ -23,6 +23,7 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
 
+
 console.log('✅ Firebase Admin initialized');
 
   SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
@@ -434,8 +435,8 @@ console.log('✅ Firebase Admin initialized');
   
   // Strict rate limiter for email sending (signup/verification)
   const emailRateLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 60 minutes (1 hour)
-    max: 10, // Max 10 emails per hour per IP
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 3, // Max 3 emails per 15 minutes per IP
     message: { 
       success: false, 
       message: 'Too many email requests. Please try again later.' 
@@ -446,11 +447,11 @@ console.log('✅ Firebase Admin initialized');
 
   // Login rate limiter - prevents brute force attacks
   const loginRateLimiter = rateLimit({
-    windowMs: 30 * 60 * 1000, // 30 minutes
-    max: 15, // Max 15 login attempts per 30 minutes per IP
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Max 5 login attempts per 15 minutes per IP
     message: { 
       success: false, 
-      message: 'Too many login attempts. Please try again in 30 minutes.' 
+      message: 'Too many login attempts. Please try again in 15 minutes.' 
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -458,8 +459,8 @@ console.log('✅ Firebase Admin initialized');
 
   // Verification code rate limiter
   const verifyRateLimiter = rateLimit({
-    windowMs: 30 * 60 * 1000, // 30 minutes
-    max: 20, // Max 20 verification attempts per 30 minutes per IP
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Max 10 verification attempts per 15 minutes per IP
     message: { 
       success: false, 
       message: 'Too many verification attempts. Please try again later.' 
@@ -471,7 +472,7 @@ console.log('✅ Firebase Admin initialized');
   // General API rate limiter
   const generalRateLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 200, // Max 200 requests per minute per IP
+    max: 60, // Max 60 requests per minute per IP
     message: { 
       success: false, 
       message: 'Too many requests. Please slow down.' 
@@ -872,8 +873,8 @@ app.post('/register-fcm-token', async function(req, res) {
     // Clear the authentication cookie
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       path: '/'
     });
     
@@ -890,8 +891,8 @@ app.post('/register-fcm-token', async function(req, res) {
     // Even if there's an error, clear the cookie
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       path: '/'
     });
     
