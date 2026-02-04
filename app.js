@@ -511,6 +511,8 @@ console.log('✅ Firebase Admin initialized');
     });
   });
 
+let userLogoutTimestamps = new Map(); // Track when users logged out
+
   // ===== Auth Check Route =====
   app.post("/check", (req, res) => {
     const token = req.cookies[COOKIE_NAME];
@@ -529,6 +531,17 @@ console.log('✅ Firebase Admin initialized');
         success: false,
         authenticated: false,
         message: 'Invalid or expired token'
+      });
+    }
+
+    // Check if user recently logged out (within last 10 seconds)
+    const logoutTime = userLogoutTimestamps.get(decoded.id);
+    if (logoutTime && Date.now() - logoutTime < 10000) {
+      console.log(`User ${decoded.id} just logged out, denying auth`);
+      return res.json({
+        success: false,
+        authenticated: false,
+        message: 'User just logged out'
       });
     }
 
@@ -875,6 +888,9 @@ app.post('/register-fcm-token', async function(req, res) {
     if (token) {
       const decoded = verifyToken(token);
       if (decoded && decoded.id) {
+        // Record logout timestamp to prevent immediate re-auth
+        userLogoutTimestamps.set(decoded.id, Date.now());
+        
         // Remove user from Socket.IO map
         userSocketMap.delete(decoded.id);
         // Remove FCM token from memory
