@@ -12,19 +12,15 @@
   const JWT_SECRET = process.env.JWT_SECRET;
   const apiKey = process.env.SENDINBLUE_API_KEY;
   const admin = require('firebase-admin');
-let serviceAccount;
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('✅ Firebase Admin initialized');
 } else {
-    serviceAccount = require('./firebase-service-account.json');
+    console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT not set, skipping Firebase initialization');
 }
-
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
-
-
-console.log('✅ Firebase Admin initialized');
 
   SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
   const COOKIE_NAME = 'auth_token';
