@@ -14,9 +14,10 @@
         window.userData = null;
         
         (async function() {
-            // Skip auth check if logging out
-            if (sessionStorage.getItem('isLoggingOut') === 'true') {
+            // Skip auth check if logging out - use localStorage which persists better on Android
+            if (localStorage.getItem('isLoggingOut') === 'true') {
                 console.log('🚪 Logout in progress, skipping auth check');
+                localStorage.removeItem('isLoggingOut'); // Clean up flag
                 return;
             }
             
@@ -803,6 +804,12 @@ function setupAppLifecycleHandling() {
             if (backgroundTimeout) {
                 clearTimeout(backgroundTimeout);
                 backgroundTimeout = null;
+            }
+            
+            // Re-check auth when app becomes visible (catches logout on resume)
+            if (localStorage.getItem('isLoggingOut') === 'true') {
+                console.log('🚪 Detected logout flag, redirecting to signup...');
+                window.location.replace('/signup.html');
             }
         }
     });
@@ -4375,13 +4382,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     settingsNav.addEventListener('click', async () => {
         if (confirm('Do you want to logout?')) {
             try {
-                // Set logout flag FIRST to prevent auth re-check
+                // Set logout flag in localStorage FIRST (survives page navigation on Android)
+                localStorage.setItem('isLoggingOut', 'true');
                 sessionStorage.setItem('isLoggingOut', 'true');
                 
                 socket.disconnect();
                 
                 // Clear all local storage and session data
-                localStorage.clear();
+                localStorage.removeItem('userDataCache'); // Remove other cached data
+                sessionStorage.clear();
                 
                 await fetch('https://lockin-production.up.railway.app/logout', {
                     method: 'POST',
@@ -4398,9 +4407,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             } catch (error) {
                 console.error('Logout error:', error);
                 // Set logout flag even on error
+                localStorage.setItem('isLoggingOut', 'true');
                 sessionStorage.setItem('isLoggingOut', 'true');
                 // Clear storage
-                localStorage.clear();
+                localStorage.removeItem('userDataCache');
+                sessionStorage.clear();
                 
                 if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
                     window.location.replace('/signup.html');

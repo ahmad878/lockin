@@ -885,13 +885,17 @@ app.post('/register-fcm-token', async function(req, res) {
       }
     }
     
-    // Clear the authentication cookie
+    // Clear the authentication cookie - with explicit options
     res.clearCookie(COOKIE_NAME, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/'
+      path: '/',
+      domain: undefined // Allow cookie to be cleared regardless of domain
     });
+    
+    // Also try clearing with different domain options for Android
+    res.clearCookie(COOKIE_NAME);
     
     console.log('✅ Logout successful, cookie cleared');
     
@@ -910,6 +914,8 @@ app.post('/register-fcm-token', async function(req, res) {
       sameSite: 'strict',
       path: '/'
     });
+    
+    res.clearCookie(COOKIE_NAME);
     
     return res.status(200).json({
       success: true,
