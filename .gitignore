@@ -6,6 +6,7 @@
 !package.json
 !package-lock.json
 !capacitor.config.json
+!firebase-service-account.json
 
 # Allow public/index.html
 !public/
