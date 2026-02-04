@@ -30,8 +30,9 @@ if (process.env.FIREBASE_PRIVATE_KEY) {
     };
     console.log('✅ Using Firebase config from environment variables');
 } else {
-    serviceAccount = require('./firebase-service-account.json');
-    console.log('✅ Using Firebase config from JSON file');
+    console.error('❌ Firebase environment variables not found!');
+    console.error('Please set FIREBASE_PRIVATE_KEY and other Firebase env vars in your hosting platform.');
+    process.exit(1);
 }
 
 admin.initializeApp({
