@@ -5120,6 +5120,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 messageData.message = data.message;
             }
+            
+            // Add reply data if present
+            if (data.replyTo) {
+                messageData.replyTo = data.replyTo;
+            }
 
             addMessageToUI(messageData, false);
             
