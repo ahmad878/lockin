@@ -748,7 +748,19 @@ function setupAppLifecycleHandling() {
                         wasInCall = isInActiveCall();
                         
                         if (wasInCall) {
-                            console.log('📱 App backgrounded while in call - starting timeout');
+                            console.log('📱 App backgrounded while in call - keeping audio active');
+                            
+                            // Keep audio context running in background
+                            if (audioContext && audioContext.state === 'running') {
+                                console.log('🔊 Audio context still running in background');
+                            }
+                            
+                            // Ensure remote audio keeps playing
+                            if (remoteAudioElement && remoteAudioElement.paused) {
+                                console.log('🔊 Restarting remote audio playback');
+                                remoteAudioElement.play().catch(e => console.error('Cannot resume audio:', e));
+                            }
+                            
                             // Give 30 seconds before ending the call (allows quick app switches)
                             backgroundTimeout = setTimeout(() => {
                                 if (isInActiveCall()) {
@@ -763,6 +775,20 @@ function setupAppLifecycleHandling() {
                             clearTimeout(backgroundTimeout);
                             backgroundTimeout = null;
                             console.log('📱 App returned to foreground - cancelled call end timeout');
+                        }
+                        
+                        // Resume audio context if suspended
+                        if (audioContext && audioContext.state === 'suspended') {
+                            console.log('🔊 Resuming audio context');
+                            audioContext.resume().then(() => {
+                                console.log('✅ Audio context resumed');
+                            }).catch(err => console.error('Failed to resume audio:', err));
+                        }
+                        
+                        // Ensure remote audio is playing
+                        if (remoteAudioElement && remoteAudioElement.paused && isInActiveCall()) {
+                            console.log('🔊 Restarting remote audio playback on foreground');
+                            remoteAudioElement.play().catch(e => console.error('Cannot resume audio:', e));
                         }
                     }
                 });
@@ -790,19 +816,47 @@ function setupAppLifecycleHandling() {
         if (document.visibilityState === 'hidden') {
             wasInCall = isInActiveCall();
             
-            if (wasInCall && !isCapacitor) {
-                // For web, end call after shorter timeout since browser might be closing
-                backgroundTimeout = setTimeout(() => {
-                    if (isInActiveCall()) {
-                        console.log('📱 Page hidden too long - ending call');
-                        handleAppClose();
-                    }
-                }, 15000); // 15 seconds for web
+            if (wasInCall) {
+                console.log('📱 Page hidden while in call');
+                
+                // Keep audio context running
+                if (audioContext && audioContext.state === 'running') {
+                    console.log('🔊 Audio context still running while hidden');
+                }
+                
+                // Ensure remote audio keeps playing
+                if (remoteAudioElement && remoteAudioElement.paused) {
+                    remoteAudioElement.play().catch(e => console.error('Cannot resume audio:', e));
+                }
+                
+                if (!isCapacitor) {
+                    // For web, end call after shorter timeout since browser might be closing
+                    backgroundTimeout = setTimeout(() => {
+                        if (isInActiveCall()) {
+                            console.log('📱 Page hidden too long - ending call');
+                            handleAppClose();
+                        }
+                    }, 15000); // 15 seconds for web
+                }
             }
         } else if (document.visibilityState === 'visible') {
             if (backgroundTimeout) {
                 clearTimeout(backgroundTimeout);
                 backgroundTimeout = null;
+            }
+            
+            // Resume audio context if suspended
+            if (audioContext && audioContext.state === 'suspended') {
+                console.log('🔊 Resuming audio context on visibility change');
+                audioContext.resume().then(() => {
+                    console.log('✅ Audio context resumed');
+                }).catch(err => console.error('Failed to resume audio:', err));
+            }
+            
+            // Ensure remote audio is playing
+            if (remoteAudioElement && remoteAudioElement.paused && isInActiveCall()) {
+                console.log('🔊 Restarting remote audio on page visible');
+                remoteAudioElement.play().catch(e => console.error('Cannot resume audio:', e));
             }
             
             // Re-check auth when app becomes visible (catches logout on resume)
@@ -1270,6 +1324,7 @@ let audioContext = null;
 let gainNode = null;
 const SPEAKER_ON_GAIN = 3.0; // High volume when speaker is on
 const SPEAKER_OFF_GAIN = 0.5; // Lower volume when speaker is off (earpiece mode)
+let audioKeepAliveInterval = null; // Keep audio alive in background
 
 const configuration = {
     iceServers: [
@@ -1379,6 +1434,25 @@ async function startWebRTCCall(targetUserId, isInitiator, contactName) {
                 source.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 console.log('🔊 Audio initialized with gain:', gainNode.gain.value, '(Speaker:', isSpeakerOn ? 'ON' : 'OFF', ')');
+                
+                // Start keep-alive mechanism to prevent audio suspension in background
+                if (!audioKeepAliveInterval) {
+                    audioKeepAliveInterval = setInterval(() => {
+                        if (audioContext) {
+                            if (audioContext.state === 'suspended') {
+                                console.log('🔊 Audio context suspended, attempting to resume...');
+                                audioContext.resume().catch(err => console.error('Resume failed:', err));
+                            }
+                            
+                            // Check if remote audio is playing
+                            if (remoteAudioElement && remoteAudioElement.paused && remoteAudioElement.srcObject) {
+                                console.log('🔊 Remote audio paused, restarting...');
+                                remoteAudioElement.play().catch(err => console.error('Play failed:', err));
+                            }
+                        }
+                    }, 2000); // Check every 2 seconds
+                    console.log('✅ Audio keep-alive started');
+                }
             } catch (err) {
                 console.log('⚠️ Could not setup audio gain, using default:', err);
             }
@@ -2029,6 +2103,14 @@ function endWebRTCCall() {
         audioContext = null;
         gainNode = null;
     }
+    
+    // Stop audio keep-alive
+    if (audioKeepAliveInterval) {
+        clearInterval(audioKeepAliveInterval);
+        audioKeepAliveInterval = null;
+        console.log('✅ Audio keep-alive stopped');
+    }
+    
     isSpeakerOn = false; // Reset speaker to OFF for next call
 
     // Close peer connection
