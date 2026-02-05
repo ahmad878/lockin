@@ -331,6 +331,25 @@ console.log('✅ Firebase Admin initialized');
       deleted: {
         type: Boolean,
         default: false
+      },
+      replyTo: {
+        messageIndex: {
+          type: Number,
+          default: null
+        },
+        message: {
+          type: String,
+          default: ''
+        },
+        messageType: {
+          type: String,
+          enum: ['text', 'voice', 'image'],
+          default: 'text'
+        },
+        senderName: {
+          type: String,
+          default: ''
+        }
       }
     }],
     lastMessage: {
@@ -1548,7 +1567,7 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
- app.post('/send-message-notification', emailRateLimiter, async function(req, res) {
+ app.post('/send-message-notification', async function(req, res) {
   try {
     const { toEmail, fromUserId, fromName } = req.body;
     console.log('Send message notification request:', { toEmail, fromUserId, fromName });
@@ -2039,7 +2058,7 @@ app.post('/register-fcm-token', async function(req, res) {
       try {
         console.log('💬 Chat message received:', data);
         
-        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, messageType, voiceUrl, voiceDuration, imageUrl, timestamp } = data;
+        const { fromUserId, fromEmail, fromName, toUserId, toEmail, toName, message, messageType, voiceUrl, voiceDuration, imageUrl, timestamp, replyTo } = data;
         
         if (!fromUserId || !toUserId) {
           console.error('Invalid chat data: missing user IDs');
@@ -2081,6 +2100,16 @@ app.post('/register-fcm-token', async function(req, res) {
           read: false,
           delivered: false
         };
+
+        // Add reply information if present
+        if (replyTo && replyTo.messageIndex !== undefined) {
+          newMessage.replyTo = {
+            messageIndex: replyTo.messageIndex,
+            message: replyTo.message || '',
+            messageType: replyTo.messageType || 'text',
+            senderName: replyTo.senderName || ''
+          };
+        }
 
         // Add message content based on type
         if (messageType === 'voice') {
@@ -2146,6 +2175,16 @@ app.post('/register-fcm-token', async function(req, res) {
             timestamp: newMessage.timestamp,
             messageType: messageType || 'text'
           };
+
+          // Add reply information if present
+          if (replyTo && replyTo.messageIndex !== undefined) {
+            emitData.replyTo = {
+              messageIndex: replyTo.messageIndex,
+              message: replyTo.message || '',
+              messageType: replyTo.messageType || 'text',
+              senderName: replyTo.senderName || ''
+            };
+          }
 
           // Add appropriate content based on type
           if (messageType === 'voice') {
