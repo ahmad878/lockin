@@ -3522,6 +3522,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             sendChatMessage(contact, messageInput);
         });
+        
+        // Close reply bar button
+        const closeReplyBarBtn = chatView.querySelector('#closeReplyBar');
+        if (closeReplyBarBtn) {
+            closeReplyBarBtn.addEventListener('click', closeReplyBar);
+        }
 
         // Image Upload functionality
         const imageUploadBtn = chatView.querySelector('#imageUploadBtn');
@@ -3663,8 +3669,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Send voice message via socket
-                    socket.emit('chat', {
+                    // Prepare voice message data
+                    const voiceMessageData = {
                         fromUserId: currentUserId,
                         fromEmail: currentUserEmail,
                         fromName: currentUserName,
@@ -3675,7 +3681,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                         voiceUrl: result.url,
                         voiceDuration: duration,
                         timestamp: new Date().toISOString()
-                    });
+                    };
+                    
+                    // Add reply data if replying to a message
+                    if (replyToData) {
+                        voiceMessageData.replyTo = replyToData;
+                    }
+                    
+                    // Send voice message via socket
+                    socket.emit('chat', voiceMessageData);
                     
                     // Add to UI
                     addMessageToUI({
@@ -3683,8 +3697,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                         voiceUrl: result.url,
                         voiceDuration: duration,
                         senderId: currentUserId,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        replyTo: replyToData
                     }, true);
+                    
+                    // Clear reply data and hide reply bar
+                    closeReplyBar();
                     
                     showToast('Voice message sent!', 'success');
                 } else {
@@ -3805,7 +3823,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Check message type
             if (msg.messageType === 'voice' && msg.voiceUrl) {
                 const voiceId = `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Build reply preview if this message is a reply
+                let replyPreview = '';
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                    const replyContent = msg.replyTo.messageType === 'voice' 
+                        ? '<i class="fas fa-microphone"></i> Voice message'
+                        : msg.replyTo.messageType === 'image'
+                        ? '<i class="fas fa-image"></i> Photo'
+                        : msg.replyTo.message || '';
+                    
+                    replyPreview = `
+                        <div class="reply-preview" onclick="scrollToMessage(${msg.replyTo.messageIndex})">
+                            <div class="reply-preview-header">${msg.replyTo.senderName || 'Unknown'}</div>
+                            <div class="reply-preview-content">${replyContent}</div>
+                        </div>
+                    `;
+                }
+                
                 bubble.innerHTML = `
+                    ${replyPreview}
                     <div class="voice-message-bubble">
                         <button class="voice-play-btn" data-voice-id="${voiceId}" data-voice-url="${msg.voiceUrl}">
                             <i class="fas fa-play"></i>
@@ -3829,7 +3866,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }, 100);
             } else if (msg.messageType === 'image' && msg.imageUrl) {
+                // Build reply preview if this message is a reply
+                let replyPreview = '';
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                    const replyContent = msg.replyTo.messageType === 'voice' 
+                        ? '<i class="fas fa-microphone"></i> Voice message'
+                        : msg.replyTo.messageType === 'image'
+                        ? '<i class="fas fa-image"></i> Photo'
+                        : msg.replyTo.message || '';
+                    
+                    replyPreview = `
+                        <div class="reply-preview" onclick="scrollToMessage(${msg.replyTo.messageIndex})">
+                            <div class="reply-preview-header">${msg.replyTo.senderName || 'Unknown'}</div>
+                            <div class="reply-preview-content">${replyContent}</div>
+                        </div>
+                    `;
+                }
+                
                 bubble.innerHTML = `
+                    ${replyPreview}
                     <div class="image-message-bubble">
                         <img src="${msg.imageUrl}" alt="Image" loading="lazy" onclick="showImageModal('${msg.imageUrl}')">
                     </div>
@@ -3839,7 +3894,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                 `;
             } else {
+                // Build reply preview if this message is a reply
+                let replyPreview = '';
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                    const replyContent = msg.replyTo.messageType === 'voice' 
+                        ? '<i class="fas fa-microphone"></i> Voice message'
+                        : msg.replyTo.messageType === 'image'
+                        ? '<i class="fas fa-image"></i> Photo'
+                        : msg.replyTo.message || '';
+                    
+                    replyPreview = `
+                        <div class="reply-preview" onclick="scrollToMessage(${msg.replyTo.messageIndex})">
+                            <div class="reply-preview-header">${msg.replyTo.senderName || 'Unknown'}</div>
+                            <div class="reply-preview-content">${replyContent}</div>
+                        </div>
+                    `;
+                }
+                
                 bubble.innerHTML = `
+                    ${replyPreview}
                     <div>${msg.message}</div>
                     <div class="message-footer">
                         <span class="message-time">${formatMessageTime(msg.timestamp)}</span>
@@ -3849,6 +3922,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             wrapper.appendChild(bubble);
+            
+            // Add reply button for all messages that are not deleted
+            if (!isDeleted) {
+                const replyBtn = document.createElement('button');
+                replyBtn.className = 'message-reply-btn';
+                replyBtn.innerHTML = '<i class="fas fa-reply"></i>';
+                replyBtn.title = 'Reply to message';
+                replyBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    setReplyTo(index, msg, contact);
+                };
+                wrapper.appendChild(replyBtn);
+            }
             
             // Add delete button only for sent messages that are not already deleted
             if (isSent && !isDeleted) {
@@ -3863,8 +3949,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 wrapper.appendChild(deleteBtn);
             }
             
-            // Long press for mobile to show delete button
-            if (isSent && !isDeleted) {
+            // Long press for mobile to show buttons
+            if (!isDeleted) {
                 let pressTimer;
                 wrapper.addEventListener('touchstart', () => {
                     pressTimer = setTimeout(() => {
@@ -3928,7 +4014,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check message type
         if (message.messageType === 'voice' && message.voiceUrl) {
             const voiceId = `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Build reply preview if this message is a reply
+            let replyPreview = '';
+            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+                const replyContent = message.replyTo.messageType === 'voice' 
+                    ? '<i class="fas fa-microphone"></i> Voice message'
+                    : message.replyTo.messageType === 'image'
+                    ? '<i class="fas fa-image"></i> Photo'
+                    : message.replyTo.message || '';
+                
+                replyPreview = `
+                    <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
+                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-content">${replyContent}</div>
+                    </div>
+                `;
+            }
+            
             bubble.innerHTML = `
+                ${replyPreview}
                 <div class="voice-message-bubble">
                     <button class="voice-play-btn" data-voice-id="${voiceId}" data-voice-url="${message.voiceUrl}">
                         <i class="fas fa-play"></i>
@@ -3952,7 +4057,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }, 100);
         } else if (message.messageType === 'image' && message.imageUrl) {
+            // Build reply preview if this message is a reply
+            let replyPreview = '';
+            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+                const replyContent = message.replyTo.messageType === 'voice' 
+                    ? '<i class="fas fa-microphone"></i> Voice message'
+                    : message.replyTo.messageType === 'image'
+                    ? '<i class="fas fa-image"></i> Photo'
+                    : message.replyTo.message || '';
+                
+                replyPreview = `
+                    <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
+                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-content">${replyContent}</div>
+                    </div>
+                `;
+            }
+            
             bubble.innerHTML = `
+                ${replyPreview}
                 <div class="image-message-bubble">
                     <img src="${message.imageUrl}" alt="Image" loading="lazy" onclick="showImageModal('${message.imageUrl}')">
                 </div>
@@ -3962,7 +4085,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             `;
         } else {
+            // Build reply preview if this message is a reply
+            let replyPreview = '';
+            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+                const replyContent = message.replyTo.messageType === 'voice' 
+                    ? '<i class="fas fa-microphone"></i> Voice message'
+                    : message.replyTo.messageType === 'image'
+                    ? '<i class="fas fa-image"></i> Photo'
+                    : message.replyTo.message || '';
+                
+                replyPreview = `
+                    <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
+                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-content">${replyContent}</div>
+                    </div>
+                `;
+            }
+            
             bubble.innerHTML = `
+                ${replyPreview}
                 <div>${message.message}</div>
                 <div class="message-footer">
                     <span class="message-time">${formatMessageTime(message.timestamp)}</span>
@@ -3972,6 +4113,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         wrapper.appendChild(bubble);
+        
+        // Add reply button for all messages
+        if (selectedContact) {
+            const replyBtn = document.createElement('button');
+            replyBtn.className = 'message-reply-btn';
+            replyBtn.innerHTML = '<i class="fas fa-reply"></i>';
+            replyBtn.title = 'Reply to message';
+            replyBtn.onclick = (e) => {
+                e.stopPropagation();
+                setReplyTo(newIndex, message, selectedContact);
+            };
+            wrapper.appendChild(replyBtn);
+        }
         
         // Add delete button only for sent messages
         if (isSent && selectedContact) {
@@ -3998,6 +4152,52 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         messagesDiv.appendChild(wrapper);
         container.scrollTop = container.scrollHeight;
+    }
+    
+    // ==================== REPLY MESSAGE FUNCTIONS ====================
+    let replyToData = null;
+    
+    function setReplyTo(messageIndex, message, contact) {
+        replyToData = {
+            messageIndex: messageIndex,
+            message: message.message || '',
+            messageType: message.messageType || 'text',
+            senderName: message.senderId === currentUserId ? 'You' : contact.customName
+        };
+        
+        // Show reply bar
+        const replyBar = document.getElementById('replyBar');
+        const replyToName = document.getElementById('replyToName');
+        const replyToContent = document.getElementById('replyToContent');
+        
+        if (replyBar && replyToName && replyToContent) {
+            replyToName.textContent = replyToData.senderName;
+            
+            // Set content based on message type
+            if (message.messageType === 'voice') {
+                replyToContent.innerHTML = '<i class="fas fa-microphone"></i> Voice message';
+            } else if (message.messageType === 'image') {
+                replyToContent.innerHTML = '<i class="fas fa-image"></i> Photo';
+            } else {
+                replyToContent.textContent = message.message || '';
+            }
+            
+            replyBar.classList.add('active');
+            
+            // Focus on input
+            const messageInput = document.getElementById('chatMessageInput');
+            if (messageInput) {
+                messageInput.focus();
+            }
+        }
+    }
+    
+    function closeReplyBar() {
+        replyToData = null;
+        const replyBar = document.getElementById('replyBar');
+        if (replyBar) {
+            replyBar.classList.remove('active');
+        }
     }
     
     // ==================== DELETE MESSAGE FUNCTIONS ====================
@@ -4154,8 +4354,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await response.json();
 
                 if (result.success) {
-                    // Send image message via socket
-                    socket.emit('chat', {
+                    // Prepare image message data
+                    const imageMessageData = {
                         fromUserId: currentUserId,
                         fromEmail: currentUserEmail,
                         fromName: currentUserName,
@@ -4165,15 +4365,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                         messageType: 'image',
                         imageUrl: result.url,
                         timestamp: new Date().toISOString()
-                    });
+                    };
+                    
+                    // Add reply data if replying to a message
+                    if (replyToData) {
+                        imageMessageData.replyTo = replyToData;
+                    }
+                    
+                    // Send image message via socket
+                    socket.emit('chat', imageMessageData);
 
                     // Add to UI
                     addMessageToUI({
                         messageType: 'image',
                         imageUrl: result.url,
                         senderId: currentUserId,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        replyTo: replyToData
                     }, true);
+                    
+                    // Clear reply data and hide reply bar
+                    closeReplyBar();
 
                     showToast('Image sent!', 'success');
                 } else {
@@ -4454,6 +4666,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
+    
+    function scrollToMessage(messageIndex) {
+        const container = document.getElementById('chatMessagesContainer');
+        if (!container) return;
+        
+        const wrapper = container.querySelector(`[data-message-index="${messageIndex}"]`);
+        if (wrapper) {
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the message briefly
+            wrapper.style.transition = 'background-color 0.3s';
+            const originalBg = wrapper.style.backgroundColor;
+            wrapper.style.backgroundColor = 'rgba(37, 211, 102, 0.2)';
+            
+            setTimeout(() => {
+                wrapper.style.backgroundColor = originalBg;
+            }, 1500);
+        }
+    }
 
     // Global audio player for voice messages
     let currentAudio = null;
@@ -4525,8 +4756,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const message = inputElement.value.trim();
         if (!message) return;
         
-        // Emit message via socket
-        socket.emit('chat', {
+        // Prepare message data
+        const messageData = {
             fromUserId: currentUserId,
             fromEmail: currentUserEmail,
             fromName: currentUserName,
@@ -4535,14 +4766,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             toName: contact.customName,
             message: message,
             timestamp: new Date().toISOString()
-        });
+        };
+        
+        // Add reply data if replying to a message
+        if (replyToData) {
+            messageData.replyTo = replyToData;
+        }
+        
+        // Emit message via socket
+        socket.emit('chat', messageData);
         
         // Add to UI immediately
         addMessageToUI({
             message: message,
             senderId: currentUserId,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            replyTo: replyToData
         }, true);
+        
+        // Clear reply data and hide reply bar
+        closeReplyBar();
         
         // Clear input and keep keyboard open
         inputElement.value = '';
