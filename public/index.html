@@ -3972,7 +3972,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else if (msg.messageType === 'image' && msg.imageUrl) {
                 // Build reply preview if this message is a reply
                 let replyPreview = '';
-                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined && msg.replyTo.messageIndex !== null && msg.replyTo.senderName) {
                     const replyContent = msg.replyTo.messageType === 'voice' 
                         ? '<i class="fas fa-microphone"></i> Voice message'
                         : msg.replyTo.messageType === 'image'
@@ -3981,7 +3981,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     replyPreview = `
                         <div class="reply-preview" onclick="scrollToMessage(${msg.replyTo.messageIndex})">
-                            <div class="reply-preview-header">${msg.replyTo.senderName || 'Unknown'}</div>
+                            <div class="reply-preview-header">${msg.replyTo.senderName}</div>
                             <div class="reply-preview-content">${replyContent}</div>
                         </div>
                     `;
@@ -4000,7 +4000,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 // Build reply preview if this message is a reply
                 let replyPreview = '';
-                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined && msg.replyTo.messageIndex !== null && msg.replyTo.senderName) {
                     const replyContent = msg.replyTo.messageType === 'voice' 
                         ? '<i class="fas fa-microphone"></i> Voice message'
                         : msg.replyTo.messageType === 'image'
@@ -4009,7 +4009,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     
                     replyPreview = `
                         <div class="reply-preview" onclick="scrollToMessage(${msg.replyTo.messageIndex})">
-                            <div class="reply-preview-header">${msg.replyTo.senderName || 'Unknown'}</div>
+                            <div class="reply-preview-header">${msg.replyTo.senderName}</div>
                             <div class="reply-preview-content">${replyContent}</div>
                         </div>
                     `;
@@ -4121,7 +4121,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+            if (message.replyTo && message.replyTo.messageIndex !== undefined && message.replyTo.messageIndex !== null && message.replyTo.senderName) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4130,7 +4130,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 replyPreview = `
                     <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
-                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-header">${message.replyTo.senderName}</div>
                         <div class="reply-preview-content">${replyContent}</div>
                     </div>
                 `;
@@ -4163,7 +4163,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else if (message.messageType === 'image' && message.imageUrl) {
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+            if (message.replyTo && message.replyTo.messageIndex !== undefined && message.replyTo.messageIndex !== null && message.replyTo.senderName) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4172,7 +4172,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 replyPreview = `
                     <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
-                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-header">${message.replyTo.senderName}</div>
                         <div class="reply-preview-content">${replyContent}</div>
                     </div>
                 `;
@@ -4191,7 +4191,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && message.replyTo.messageIndex !== undefined) {
+            if (message.replyTo && message.replyTo.messageIndex !== undefined && message.replyTo.messageIndex !== null && message.replyTo.senderName) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4200,7 +4200,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 replyPreview = `
                     <div class="reply-preview" onclick="scrollToMessage(${message.replyTo.messageIndex})">
-                        <div class="reply-preview-header">${message.replyTo.senderName || 'Unknown'}</div>
+                        <div class="reply-preview-header">${message.replyTo.senderName}</div>
                         <div class="reply-preview-content">${replyContent}</div>
                     </div>
                 `;
