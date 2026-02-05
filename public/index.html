@@ -2637,6 +2637,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             const lastMsgTime = item.lastMessage ? formatChatTime(item.lastMessage.timestamp) : '';
             const isFromMe = item.lastMessage && item.lastMessage.senderId === currentUserId;
             
+            // Determine correct status icon based on read/delivered/sent
+            let statusIcon = '';
+            if (isFromMe && item.lastMessage) {
+                if (item.lastMessage.read) {
+                    statusIcon = '<i class="fas fa-check-double" style="color: #53bdeb; margin-right: 4px; font-size: 12px;"></i>';
+                } else if (item.lastMessage.delivered) {
+                    statusIcon = '<i class="fas fa-check-double" style="color: #8696a0; margin-right: 4px; font-size: 12px;"></i>';
+                } else {
+                    statusIcon = '<i class="fas fa-check" style="color: #8696a0; margin-right: 4px; font-size: 12px;"></i>';
+                }
+            }
+            
             return `
                 <div class="chat-item" data-contact-email="${item.email}" data-contact-user-id="${item.userId}" data-is-contact="${item.isContact}" data-actual-name="${item.actualName}">
                     <div class="chat-avatar">${initial}</div>
@@ -2645,7 +2657,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <div class="chat-name">${item.displayName}${!item.isContact ? ' <span style="font-size: 10px; color: #8696a0; font-weight: normal;">(not in contacts)</span>' : ''}</div>
                             ${lastMsgTime ? `<div class="chat-time">${lastMsgTime}</div>` : ''}
                         </div>
-                        <div class="chat-preview">${isFromMe ? '<i class="fas fa-check-double" style="color: #53bdeb; margin-right: 4px; font-size: 12px;"></i>' : ''}${truncateText(lastMsgPreview, 35)}</div>
+                        <div class="chat-preview">${statusIcon}${truncateText(lastMsgPreview, 35)}</div>
                     </div>
                 </div>
             `;
