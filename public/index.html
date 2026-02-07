@@ -3788,12 +3788,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         let audioChunks = [];
         let recordingStartTime = null;
         let recordingInterval = null;
+        let isCancelled = false;
 
         voiceBtn.addEventListener('click', async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
+                isCancelled = false;
                 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -3805,12 +3807,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Stop all tracks
                     stream.getTracks().forEach(track => track.stop());
                     
-                    // Create blob from chunks
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
-                    
-                    // Upload to server
-                    await uploadVoiceMessage(audioBlob, duration, contact);
+                    // Only upload if not cancelled
+                    if (!isCancelled) {
+                        // Create blob from chunks
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+                        
+                        // Upload to server
+                        await uploadVoiceMessage(audioBlob, duration, contact);
+                    }
                     
                     // Reset UI
                     recordingIndicator.style.display = 'none';
@@ -3842,6 +3847,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         cancelBtn.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
+                isCancelled = true; // Mark as cancelled before stopping
                 mediaRecorder.stop();
                 audioChunks = []; // Discard recording
                 recordingIndicator.style.display = 'none';
