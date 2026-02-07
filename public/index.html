@@ -2767,6 +2767,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         selectedContact = contact;
         const isContact = contact.isContact !== false; // Default to true if not specified
         
+        // Clear any leftover reply data from previous chat
+        replyToData = null;
+        
         // Create chat view
         const chatView = document.createElement('div');
         chatView.className = 'chat-view';
@@ -3878,6 +3881,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const result = await response.json();
                 
                 if (result.success) {
+                    // Debug logging
+                    console.log('📤 Sending voice message. replyToData:', replyToData);
+                    console.log('📤 isValidReplyData:', isValidReplyData(replyToData));
+                    
                     // Prepare voice message data
                     const voiceMessageData = {
                         fromUserId: currentUserId,
@@ -3893,10 +3900,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     };
                     
                     // Add reply data if replying to a message (validate it's complete)
-                    if (replyToData && 
-                        typeof replyToData.messageIndex === 'number' && 
-                        replyToData.senderName && 
-                        replyToData.senderName.trim() !== '') {
+                    if (isValidReplyData(replyToData)) {
                         voiceMessageData.replyTo = replyToData;
                     }
                     
@@ -3913,10 +3917,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     };
                     
                     // Only add replyTo if it exists and is complete
-                    if (replyToData && 
-                        typeof replyToData.messageIndex === 'number' && 
-                        replyToData.senderName && 
-                        replyToData.senderName.trim() !== '') {
+                    if (isValidReplyData(replyToData)) {
                         uiData.replyTo = replyToData;
                     }
                     
@@ -4238,10 +4239,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && 
-                typeof message.replyTo.messageIndex === 'number' && 
-                message.replyTo.senderName && 
-                message.replyTo.senderName.trim() !== '') {
+            if (isValidReplyData(message.replyTo)) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4283,10 +4281,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else if (message.messageType === 'image' && message.imageUrl) {
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && 
-                typeof message.replyTo.messageIndex === 'number' && 
-                message.replyTo.senderName && 
-                message.replyTo.senderName.trim() !== '') {
+            if (isValidReplyData(message.replyTo)) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4314,10 +4309,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             // Build reply preview if this message is a reply
             let replyPreview = '';
-            if (message.replyTo && 
-                typeof message.replyTo.messageIndex === 'number' && 
-                message.replyTo.senderName && 
-                message.replyTo.senderName.trim() !== '') {
+            if (isValidReplyData(message.replyTo)) {
                 const replyContent = message.replyTo.messageType === 'voice' 
                     ? '<i class="fas fa-microphone"></i> Voice message'
                     : message.replyTo.messageType === 'image'
@@ -4386,6 +4378,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // ==================== REPLY MESSAGE FUNCTIONS ====================
     let replyToData = null;
+    
+    // Helper function to validate reply data is complete and valid
+    function isValidReplyData(replyData) {
+        if (!replyData) return false;
+        if (typeof replyData.messageIndex !== 'number') return false;
+        if (!replyData.senderName || typeof replyData.senderName !== 'string') return false;
+        if (replyData.senderName.trim() === '') return false;
+        return true;
+    }
     
     function setReplyTo(messageIndex, message, contact) {
         replyToData = {
@@ -4598,10 +4599,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     };
                     
                     // Add reply data if replying to a message (validate it's complete)
-                    if (replyToData && 
-                        typeof replyToData.messageIndex === 'number' && 
-                        replyToData.senderName && 
-                        replyToData.senderName.trim() !== '') {
+                    if (isValidReplyData(replyToData)) {
                         imageMessageData.replyTo = replyToData;
                     }
                     
@@ -4617,10 +4615,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     };
                     
                     // Only add replyTo if it exists and is complete
-                    if (replyToData && 
-                        typeof replyToData.messageIndex === 'number' && 
-                        replyToData.senderName && 
-                        replyToData.senderName.trim() !== '') {
+                    if (isValidReplyData(replyToData)) {
                         uiData.replyTo = replyToData;
                     }
                     
@@ -5011,10 +5006,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
         
         // Add reply data if replying to a message (validate it's complete)
-        if (replyToData && 
-            typeof replyToData.messageIndex === 'number' && 
-            replyToData.senderName && 
-            replyToData.senderName.trim() !== '') {
+        if (isValidReplyData(replyToData)) {
             messageData.replyTo = replyToData;
         }
         
@@ -5029,10 +5021,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
         
         // Only add replyTo if it exists and is complete
-        if (replyToData && 
-            typeof replyToData.messageIndex === 'number' && 
-            replyToData.senderName && 
-            replyToData.senderName.trim() !== '') {
+        if (isValidReplyData(replyToData)) {
             uiData.replyTo = replyToData;
         }
         
