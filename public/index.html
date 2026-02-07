@@ -3901,14 +3901,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                     socket.emit('chat', voiceMessageData);
                     
                     // Add to UI
-                    addMessageToUI({
+                    const uiData = {
                         messageType: 'voice',
                         voiceUrl: result.url,
                         voiceDuration: duration,
                         senderId: currentUserId,
-                        timestamp: new Date().toISOString(),
-                        replyTo: replyToData
-                    }, true);
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // Only add replyTo if it exists
+                    if (replyToData) {
+                        uiData.replyTo = replyToData;
+                    }
+                    
+                    addMessageToUI(uiData, true);
                     
                     // Clear reply data and hide reply bar
                     closeReplyBar();
@@ -4585,13 +4591,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                     socket.emit('chat', imageMessageData);
 
                     // Add to UI
-                    addMessageToUI({
+                    const uiData = {
                         messageType: 'image',
                         imageUrl: result.url,
                         senderId: currentUserId,
-                        timestamp: new Date().toISOString(),
-                        replyTo: replyToData
-                    }, true);
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // Only add replyTo if it exists
+                    if (replyToData) {
+                        uiData.replyTo = replyToData;
+                    }
+                    
+                    addMessageToUI(uiData, true);
                     
                     // Clear reply data and hide reply bar
                     closeReplyBar();
@@ -4986,12 +4998,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         socket.emit('chat', messageData);
         
         // Add to UI immediately
-        addMessageToUI({
+        const uiData = {
             message: message,
             senderId: currentUserId,
-            timestamp: new Date().toISOString(),
-            replyTo: replyToData
-        }, true);
+            timestamp: new Date().toISOString()
+        };
+        
+        // Only add replyTo if it exists
+        if (replyToData) {
+            uiData.replyTo = replyToData;
+        }
+        
+        addMessageToUI(uiData, true);
         
         // Clear reply data and hide reply bar
         closeReplyBar();
