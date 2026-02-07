@@ -506,6 +506,64 @@
             }
         }
 
+        /* Toast Notification Styles */
+        .toast-notification {
+            position: fixed;
+            top: calc(var(--safe-area-top) + 20px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            animation: slideDown 0.3s ease, fadeOut 0.3s ease 2.7s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            font-weight: 500;
+            font-size: 14px;
+            max-width: 90%;
+            min-width: 280px;
+        }
+
+        .toast-notification.success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .toast-notification.error {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .toast-notification.info {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .toast-notification i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
         /* iOS Specific Fixes */
         @supports (-webkit-touch-callout: none) {
             input {
@@ -891,8 +949,8 @@
                         });
                         
                         setTimeout(() => {
-                            window.location.href = '/';
-                        }, 1500);
+                            window.location.replace('/index.html');
+                        }, 1000);
                     } else {
                         // Error - shake animation
                         codeInputs.forEach(input => {

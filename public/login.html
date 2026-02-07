@@ -958,10 +958,10 @@
                     // Successful login
                     showToast('Login successful! Redirecting...', 'success');
                     
-                    // Redirect to dashboard (from your original code)
+                    // Redirect to dashboard - use replace to prevent back button issues
                     setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                        window.location.replace('/index.html');
+                    }, 500);
                 } else {
                     // Failed login - show server error
                     showToast(result.message || 'Login failed', 'error');
