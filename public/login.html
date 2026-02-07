@@ -570,111 +570,6 @@
                 }, 1500);
             });
 
-            // Form Submission
-            loginForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                // Clear previous errors
-                document.querySelectorAll('.error-message').forEach(el => el.remove());
-                document.querySelectorAll('.form-group input').forEach(input => {
-                    input.classList.remove('error');
-                });
-
-                const formData = new FormData(loginForm);
-                const data = Object.fromEntries(formData.entries());
-
-                let isValid = true;
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                
-                // Auto-correct email if invalid
-                let correctedEmail = data.email.trim();
-                if (!emailRegex.test(correctedEmail)) {
-                    correctedEmail = correctedEmail.replace(/\s+/g, '');
-                    
-                    if (!correctedEmail.includes('@')) {
-                        const lastDot = correctedEmail.lastIndexOf('.');
-                        if (lastDot > 0) {
-                            correctedEmail = correctedEmail.substring(0, lastDot) + '@' + correctedEmail.substring(lastDot + 1);
-                        } else {
-                            correctedEmail = correctedEmail + '@email.com';
-                        }
-                    }
-                    
-                    if (correctedEmail.includes('@')) {
-                        const atIndex = correctedEmail.indexOf('@');
-                        const afterAt = correctedEmail.substring(atIndex + 1);
-                        if (!afterAt || !afterAt.includes('.')) {
-                            correctedEmail = correctedEmail + (afterAt ? '.' : '') + 'com';
-                        }
-                    }
-                    
-                    if (emailRegex.test(correctedEmail)) {
-                        emailInput.value = correctedEmail;
-                        data.email = correctedEmail;
-                        showToast('Email format corrected', 'success');
-                    } else {
-                        showFieldError('email', 'Please enter a valid email address');
-                        isValid = false;
-                    }
-                }
-                
-                if (data.password.length < 1) {
-                    showFieldError('password', 'Password is required');
-                    isValid = false;
-                }
-
-                // Send notification if email is valid
-                if (emailRegex.test(data.email)) {
-                    await sendLoginNotification(data.email);
-                }
-
-                if (!isValid) return;
-                
-                // Show loading state
-                loginBtn.disabled = true;
-                const originalContent = loginBtn.innerHTML;
-                loginBtn.innerHTML = '<div class="spinner"></div><span>Signing In...</span>';
-
-                try {
-                    const response = await fetch('/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: data.email,
-                            password: data.password,
-                            rememberMe: data.rememberMe === 'on'
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (response.ok) {
-                        showToast('Login successful! Redirecting...', 'success');
-                        
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 1000);
-                    } else {
-                        showToast(result.message || 'Login failed', 'error');
-                        
-                        if (result.errors) {
-                            Object.keys(result.errors).forEach(field => {
-                                showFieldError(field, result.errors[field]);
-                            });
-                        } else {
-                            showFieldError('email', 'Invalid email or password');
-                            showFieldError('password', 'Invalid email or password');
-                        }
-                    }
-                } catch (error) {
-                    showToast('Network error. Please try again.', 'error');
-                    console.error('Login error:', error);
-                } finally {
-                    loginBtn.disabled = false;
-                    loginBtn.innerHTML = originalContent;
-                }
-            });
-
             // Helper Functions
             function showFieldError(fieldName, message) {
                 const input = document.querySelector(`[name="${fieldName}"]`);
@@ -728,66 +623,6 @@
                     }
                 }
             });
-
-            // Send notification function
-            async function sendLoginNotification(email) {
-                try {
-                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
-                        const { LocalNotifications } = window.Capacitor.Plugins;
-
-                        console.log('📲 Sending login notification via Capacitor...');
-
-                        try {
-                            const permission = await LocalNotifications.requestPermissions();
-                            console.log('Notification permission:', permission);
-                        } catch (err) {
-                            console.log('Permission request skipped:', err);
-                        }
-
-                        await LocalNotifications.schedule({
-                            notifications: [
-                                {
-                                    title: 'Login Successful',
-                                    body: `Welcome back! You've logged in successfully.`,
-                                    id: Date.now(),
-                                    extra: {
-                                        email: email,
-                                        type: 'login'
-                                    },
-                                    actionTypeId: 'login_notification',
-                                    smallIcon: 'res://mipmap/ic_launcher',
-                                    largeIcon: 'res://mipmap/ic_launcher',
-                                    sound: 'beep'
-                                }
-                            ]
-                        });
-
-                        console.log('✅ Login notification sent');
-                    } else {
-                        console.log('⚠️ LocalNotifications not available, using browser fallback');
-                        
-                        if ('Notification' in window) {
-                            if (Notification.permission === 'granted') {
-                                new Notification('Login Successful', {
-                                    body: `Welcome back! You've logged in successfully.`,
-                                    icon: '/favicon.ico'
-                                });
-                            } else if (Notification.permission !== 'denied') {
-                                Notification.requestPermission().then(permission => {
-                                    if (permission === 'granted') {
-                                        new Notification('Login Successful', {
-                                            body: `Welcome back! You've logged in successfully.`,
-                                            icon: '/favicon.ico'
-                                        });
-                                    }
-                                });
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('❌ Notification error:', error);
-                }
-            }
         });
 
         const toggleButton = document.querySelector('.password-toggle');
@@ -927,11 +762,6 @@
                 isValid = false;
             }
 
-            // Send notification if email is valid (even if password validation fails)
-            if (emailRegex.test(data.email)) {
-                await sendLoginNotification(data.email);
-            }
-
             if (!isValid) return;
             
             // Show loading state
@@ -940,11 +770,12 @@
 
             try {
                 // ACTUAL POST REQUEST from your original login code
-                const response = await fetch('/login', {
+                const response = await fetch('https://lockin-production.up.railway.app/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         email: data.email,
                         password: data.password,
@@ -957,6 +788,9 @@
                 if (response.ok) {
                     // Successful login
                     showToast('Login successful! Redirecting...', 'success');
+                    
+                    // Send login notification
+                    await sendLoginNotification(data.email);
                     
                     // Redirect to dashboard - use replace to prevent back button issues
                     setTimeout(() => {
@@ -1142,7 +976,7 @@
                 // Don't show error to user, just log it
             }
         }
-    });
+    
 </script>
 </body>
 </html>
