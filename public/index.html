@@ -4048,7 +4048,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 // Build reply preview if this message is a reply
                 let replyPreview = '';
-                if (msg.replyTo && msg.replyTo.messageIndex !== undefined) {
+                if (msg.replyTo && msg.replyTo.messageIndex !== undefined && msg.replyTo.messageIndex !== null && msg.replyTo.senderName) {
                     const replyContent = msg.replyTo.messageType === 'voice' 
                         ? '<i class="fas fa-microphone"></i> Voice message'
                         : msg.replyTo.messageType === 'image'
