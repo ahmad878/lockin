@@ -303,7 +303,7 @@ console.log('✅ Firebase Admin initialized');
       voiceUrl: {
         type: String,
         required: function() {
-          return this.messageType === 'voice';
+          return this.messageType === 'voice' && !this.deleted;
         }
       },
       voiceDuration: {
@@ -313,7 +313,7 @@ console.log('✅ Firebase Admin initialized');
       imageUrl: {
         type: String,
         required: function() {
-          return this.messageType === 'image';
+          return this.messageType === 'image' && !this.deleted;
         }
       },
       timestamp: {
@@ -1323,6 +1323,58 @@ app.post('/register-fcm-token', async function(req, res) {
     }
   });
 
+  // Helper function to extract Cloudinary public_id from URL
+  function extractCloudinaryPublicId(url) {
+    try {
+      // Example URL: https://res.cloudinary.com/[cloud]/image/upload/v123456/folder/filename.ext
+      const urlParts = url.split('/upload/');
+      if (urlParts.length < 2) return null;
+      
+      // Get the part after /upload/ (e.g., "v123456/folder/filename.ext")
+      const pathParts = urlParts[1].split('/');
+      
+      // Remove version (starts with 'v') and get rest
+      const startIndex = pathParts[0].startsWith('v') ? 1 : 0;
+      const remainingPath = pathParts.slice(startIndex).join('/');
+      
+      // Remove file extension
+      const publicId = remainingPath.substring(0, remainingPath.lastIndexOf('.')) || remainingPath;
+      
+      return publicId;
+    } catch (error) {
+      console.error('Error extracting public_id:', error);
+      return null;
+    }
+  }
+
+  // Helper function to delete file from Cloudinary
+  async function deleteFromCloudinary(url, resourceType) {
+    try {
+      const publicId = extractCloudinaryPublicId(url);
+      if (!publicId) {
+        console.error('❌ Could not extract public_id from URL:', url);
+        return false;
+      }
+
+      console.log(`🗑️ Deleting from Cloudinary - public_id: ${publicId}, type: ${resourceType}`);
+      
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType // 'image' or 'video'
+      });
+
+      if (result.result === 'ok') {
+        console.log('✅ Successfully deleted from Cloudinary:', publicId);
+        return true;
+      } else {
+        console.warn('⚠️ Cloudinary deletion returned:', result.result);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error deleting from Cloudinary:', error);
+      return false;
+    }
+  }
+
   // Delete a specific message from a chat
   app.delete('/chat/:contactEmail/message/:messageIndex', async function(req, res) {
     try {
@@ -1391,6 +1443,20 @@ app.post('/register-fcm-token', async function(req, res) {
           success: false,
           message: 'You can only delete your own messages'
         });
+      }
+
+      // Delete from Cloudinary if it's an image or voice message
+      if (message.messageType === 'image' && message.imageUrl) {
+        console.log('🗑️ Attempting to delete image from Cloudinary...');
+        await deleteFromCloudinary(message.imageUrl, 'image');
+        // Clear the imageUrl from database
+        chat.messages[messageIndex].imageUrl = '';
+      } else if (message.messageType === 'voice' && message.voiceUrl) {
+        console.log('🗑️ Attempting to delete voice message from Cloudinary...');
+        await deleteFromCloudinary(message.voiceUrl, 'video');
+        // Clear the voiceUrl from database
+        chat.messages[messageIndex].voiceUrl = '';
+        chat.messages[messageIndex].voiceDuration = 0;
       }
 
       // Mark the message as deleted (don't remove it, so other person sees it was deleted)
